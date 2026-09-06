@@ -1,0 +1,145 @@
+# ==============================================================================
+# Byte-compiled / optimized / DLL files & Python Caches
+# ==============================================================================
+__pycache__/
+**/__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+.eggs/
+dist/
+build/
+
+# ==============================================================================
+# Caches, Testing, and Linting
+# ==============================================================================
+.pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+.ipynb_checkpoints/
+
+# ==============================================================================
+# Virtual Environments
+# ==============================================================================
+.venv/
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+
+# ==============================================================================
+# Environment Variables & Secrets
+# ==============================================================================
+.env
+.env.local
+.env.*.local
+!.env.example
+*.pem
+*.key
+
+# ==============================================================================
+# IDEs and Editors
+# ==============================================================================
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+*.sublime-project
+*.sublime-workspace
+
+# ==============================================================================
+# Datasets and Large Data Files
+# ==============================================================================
+# Ignore all files in data subdirectories except .gitkeep files
+data/raw/*
+!data/raw/.gitkeep
+data/processed/*
+!data/processed/.gitkeep
+data/external/*
+!data/external/.gitkeep
+data/knowledge_base/*
+!data/knowledge_base/.gitkeep
+
+# Catch-all for any nested subdirectories in data/
+data/**/
+!data/**/.gitkeep
+
+# Specific dataset directories and symlinks/junctions
+data/raw/MIMIC*
+data/raw/mimic*
+data/raw/DrugBank/
+data/raw/TwoSide/
+data/raw/DDI/
+data/raw/hosp/
+data/raw/icu/
+data/raw/hos/
+
+# Data file formats (regardless of folder location)
+*.csv
+*.csv.gz
+*.tsv
+*.tsv.gz
+*.parquet
+*.feather
+*.arrow
+*.orc
+*.h5
+*.hdf5
+*.jsonl
+*.jsonl.gz
+*.xml
+*.xml.gz
+*.zip
+*.tar
+*.tar.gz
+*.tgz
+*.7z
+*.rar
+
+# Database files
+*.duckdb
+*.duckdb.wal
+*.db
+*.sqlite
+*.sqlite3
+
+# ==============================================================================
+# Model Checkpoints, Weights, and Serialized Artifacts
+# ==============================================================================
+checkpoints/
+models/
+saved_models/
+*.pt
+*.pth
+*.bin
+*.onnx
+*.safetensors
+*.joblib
+*.pkl
+*.pickle
+*.ckpt
+
+# ==============================================================================
+# Experiments, Tracking, and Logs
+# ==============================================================================
+logs/
+*.log
+wandb/
+runs/
+mlruns/
+lightning_logs/
+
+# ==============================================================================
+# Operating System & Temporary Files
+# ==============================================================================
+.DS_Store
+Thumbs.db
+desktop.ini
+tmp/
+temp/
+scratch/
