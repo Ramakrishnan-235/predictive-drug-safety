@@ -1,28 +1,38 @@
 # ==============================================================================
-# Byte-compiled / optimized / DLL files & Python Caches
+# Byte-compiled / optimized / DLL files & Python caches
 # ==============================================================================
 __pycache__/
 **/__pycache__/
 *.py[cod]
 *$py.class
 *.so
+*.egg
 *.egg-info/
 .eggs/
 dist/
 build/
+pip-wheel-metadata/
+__pypackages__/
+*.whl
 
 # ==============================================================================
-# Caches, Testing, and Linting
+# Caches, testing, and linting
 # ==============================================================================
 .pytest_cache/
 .coverage
+coverage.xml
+*.cover
 htmlcov/
 .mypy_cache/
 .ruff_cache/
+.tox/
+.nox/
+.hypothesis/
 .ipynb_checkpoints/
+.cache/
 
 # ==============================================================================
-# Virtual Environments
+# Virtual environments
 # ==============================================================================
 .venv/
 venv/
@@ -32,7 +42,7 @@ env.bak/
 venv.bak/
 
 # ==============================================================================
-# Environment Variables & Secrets
+# Environment variables & secrets
 # ==============================================================================
 .env
 .env.local
@@ -42,7 +52,7 @@ venv.bak/
 *.key
 
 # ==============================================================================
-# IDEs and Editors
+# IDEs and editors
 # ==============================================================================
 .vscode/
 .idea/
@@ -53,9 +63,9 @@ venv.bak/
 *.sublime-workspace
 
 # ==============================================================================
-# Datasets and Large Data Files
+# Datasets and large data files (PhysioNet / DrugBank / DDI — do not commit)
 # ==============================================================================
-# Ignore all files in data subdirectories except .gitkeep files
+# Keep directory layout via .gitkeep; ignore everything else
 data/raw/*
 !data/raw/.gitkeep
 data/processed/*
@@ -65,13 +75,9 @@ data/external/*
 data/knowledge_base/*
 !data/knowledge_base/.gitkeep
 
-# Catch-all for any nested subdirectories in data/
-data/**/
-!data/**/.gitkeep
-
-# Specific dataset directories and symlinks/junctions
-data/raw/MIMIC*
-data/raw/mimic*
+# Nested data dumps (MIMIC-IV, DrugBank, DDInter, TWOSIDES, junctions)
+data/raw/MIMIC*/
+data/raw/mimic*/
 data/raw/DrugBank/
 data/raw/TwoSide/
 data/raw/DDI/
@@ -79,7 +85,7 @@ data/raw/hosp/
 data/raw/icu/
 data/raw/hos/
 
-# Data file formats (regardless of folder location)
+# Data file formats anywhere in the repo
 *.csv
 *.csv.gz
 *.tsv
@@ -90,6 +96,8 @@ data/raw/hos/
 *.orc
 *.h5
 *.hdf5
+*.npy
+*.npz
 *.jsonl
 *.jsonl.gz
 *.xml
@@ -109,11 +117,12 @@ data/raw/hos/
 *.sqlite3
 
 # ==============================================================================
-# Model Checkpoints, Weights, and Serialized Artifacts
+# Model checkpoints, weights, and serialized artifacts
+# Leading slash = repo-root only, so src/models/ can be committed later
 # ==============================================================================
-checkpoints/
-models/
-saved_models/
+/checkpoints/
+/models/
+/saved_models/
 *.pt
 *.pth
 *.bin
@@ -122,24 +131,33 @@ saved_models/
 *.joblib
 *.pkl
 *.pickle
+*.pkl.gz
 *.ckpt
 
 # ==============================================================================
-# Experiments, Tracking, and Logs
+# Experiments, tracking, and logs
 # ==============================================================================
 logs/
 *.log
 wandb/
-runs/
+/runs/
+experiments/runs/*
+!experiments/runs/.gitkeep
 mlruns/
 lightning_logs/
+outputs/
+artifacts/
 
 # ==============================================================================
-# Operating System & Temporary Files
+# Operating system & temporary files
 # ==============================================================================
 .DS_Store
 Thumbs.db
+ehthumbs.db
 desktop.ini
 tmp/
 temp/
 scratch/
+*.bak
+*.tmp
+*.orig
