@@ -43,6 +43,11 @@ st.sidebar.header("Patient Selection")
 hadm_list = df["hadm_id"].head(50).to_list()
 selected_hadm = st.sidebar.selectbox("Select Admission (hadm_id):", hadm_list)
 
+st.sidebar.markdown("---")
+st.sidebar.header("Explainability Engine")
+use_llm = st.sidebar.checkbox("Enable Deep LLM Rationale Synthesis", value=True)
+st.sidebar.caption(f"Active Provider: `{explainer.llm_explainer.provider}`")
+
 # Retrieve Selected Patient Record
 patient_row = df.filter(pl.col("hadm_id") == selected_hadm).to_dicts()[0]
 
@@ -64,7 +69,12 @@ x_tensor = torch.tensor(feature_vals, dtype=torch.float32)
 rec = explainer.generate_clinical_explanation(
     hadm_id=selected_hadm,
     feature_tensor=x_tensor,
-    active_medications=patient_row["drug_name_list"]
+    active_medications=patient_row["drug_name_list"],
+    clinical_labs={
+        "age_at_admission": int(patient_row["age_at_admission"]),
+        "max_creatinine": float(patient_row["max_creatinine"] or 1.0)
+    },
+    use_llm=use_llm
 )
 
 # Main UI Columns
@@ -129,7 +139,9 @@ with right_col:
     st.info(f"**Pharmacological Mechanism:**\n{rec.pharmacological_mechanisms}")
 
     if rec.clinical_guideline_citations:
-        st.warning(f"**Clinical Guideline Evidence:**\n{rec.clinical_guideline_citations[0]}")
+        with st.expander("Grounded Clinical Guidelines (Beers & STOPP v3)", expanded=True):
+            for cite in rec.clinical_guideline_citations:
+                st.markdown(f"- *{cite}*")
 
     st.subheader("Actionable Deprescribing Recommendations")
     for idx, action in enumerate(rec.actionable_deprescribing_plan, 1):

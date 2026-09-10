@@ -106,11 +106,13 @@ def evaluate_patient_risk(request: CDSHookRequest):
 
     active_meds = ["lorazepam", "furosemide", "diphenhydramine", "hydralazine", "metoprolol"]
 
-    # Generate mechanistic prediction and attributions
+    # Generate mechanistic prediction and attributions via LLM Explainer
     rec = explainer_engine.generate_clinical_explanation(
         hadm_id=hadm_id,
         feature_tensor=simulated_vector,
-        active_medications=active_meds
+        active_medications=active_meds,
+        clinical_labs={"age_at_admission": 82, "max_creatinine": 1.65},
+        use_llm=True
     )
 
     if rec.predicted_fall_risk < 0.20:

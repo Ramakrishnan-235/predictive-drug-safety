@@ -1,0 +1,19 @@
+# LLM Clinical Explainer Configuration
+provider: "ollama"  # options: "auto", "openai", "gemini", "ollama", "groq", "mock"
+model_name: "glm-5.3-flash:cloud"
+temperature: 0.1
+max_retries: 2
+timeout_seconds: 30
+
+# Docker / Local Ollama Settings
+ollama_base_url: "http://localhost:11434"
+ollama_model: "glm-5.3-flash:cloud"
+
+# Clinical Role Prompt Directives
+clinical_context:
+  guideline_standards: "AGS Beers Criteria 2023 and STOPP/START v3"
+  focus_areas:
+    - "Central nervous system polypharmacy & sedation"
+    - "Anticholinergic burden and cognitive reserve"
+    - "Vasodilator & loop diuretic orthostatic hypotension"
+    - "Renal clearance reduction & metabolite accumulation"

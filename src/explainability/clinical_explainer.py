@@ -8,7 +8,7 @@ if str(PROJECT_ROOT) not in sys.path:
 
 import torch
 from pydantic import BaseModel, Field
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 import json
 
 from src.explainability.attribution import PatientRiskAttributor, FEATURE_NAMES
@@ -29,12 +29,19 @@ class MechanisticExplainerEngine:
     def __init__(self, checkpoint_path: str = "models/fall_risk_model.pt"):
         self.attributor = PatientRiskAttributor(checkpoint_path=checkpoint_path)
         self.retriever = ClinicalKnowledgeRetriever()
+        
+        # Lazy load LLM Explainer
+        from src.explainability.llm_explainer import LLMClinicalExplainer
+        self.llm_explainer = LLMClinicalExplainer()
 
     def generate_clinical_explanation(
         self, 
         hadm_id: int, 
         feature_tensor: Any, 
-        active_medications: List[str]
+        active_medications: List[str],
+        clinical_labs: Optional[Dict[str, Any]] = None,
+        top_interaction_pairs: Optional[List[str]] = None,
+        use_llm: bool = True
     ) -> ClinicalRecommendation:
         # 1. Compute neural prediction and attribution
         prob, top_drivers = self.attributor.explain_admission(feature_tensor, top_k=3)
@@ -46,7 +53,23 @@ class MechanisticExplainerEngine:
         # 3. Stratify Risk
         stratification = "High" if prob >= 0.40 else ("Moderate" if prob >= 0.20 else "Low")
 
-        # 4. Formulate structured rationale
+        # 4. Synthesize via LLM Explainer if enabled
+        if use_llm:
+            try:
+                return self.llm_explainer.synthesize_explanation(
+                    hadm_id=hadm_id,
+                    predicted_fall_risk=prob,
+                    risk_stratification=stratification,
+                    top_drivers=top_drivers,
+                    active_medications=active_medications,
+                    clinical_labs=clinical_labs,
+                    retrieved_guidelines=retrieved_texts,
+                    top_interaction_pairs=top_interaction_pairs
+                )
+            except Exception as e:
+                print(f"[MechanisticExplainer Warning] LLM generation encountered error ({e}); falling back to template engine.")
+
+        # 5. Deterministic fallback rationale
         mechanisms = []
         action_plan = []
 
@@ -61,6 +84,10 @@ class MechanisticExplainerEngine:
         if any("renal" in d or "creatinine" in d for d in driver_names):
             mechanisms.append("Reduced glomerular filtration rate prolongs active metabolite clearance, sustaining peak drug exposure.")
             action_plan.append("Re-calculate CrCl via Cockcroft-Gault; perform renal dose-adjustment on clearance-dependent medications.")
+
+        if any("opioid" in d for d in driver_names):
+            mechanisms.append("Mu-opioid receptor stimulation blunts cerebellar coordination, causing sedation and balance impairment.")
+            action_plan.append("Taper opioid dose by 15-20% weekly and trial non-opioid pain modalities.")
 
         if not action_plan:
             action_plan.append("Continue routine observation; reassess medication regimen if clinical status changes.")
@@ -82,7 +109,9 @@ if __name__ == "__main__":
     recommendation = engine.generate_clinical_explanation(
         hadm_id=20001234,
         feature_tensor=dummy_features,
-        active_medications=["lorazepam", "furosemide", "gabapentin"]
+        active_medications=["lorazepam", "furosemide", "gabapentin", "morphine"],
+        clinical_labs={"age_at_admission": 81, "max_creatinine": 1.7},
+        use_llm=True
     )
-    print("\n--- Synthesized Clinical Recommendation ---")
+    print("\n--- Synthesized Clinical Recommendation (via MechanisticExplainerEngine) ---")
     print(recommendation.model_dump_json(indent=2))
