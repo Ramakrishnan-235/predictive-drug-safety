@@ -50,8 +50,21 @@ class PatientGraphDataset(Dataset):
 def build_patient_graphs(
     data_path: str = "data/processed/geriatric_features_with_ddi.parquet",
     known_ddi_pairs: Dict[Tuple[str, str], float] = None,
-    embedding_dim: int = 32
+    embedding_dim: int = 32,
+    cache_path: str = "data/processed/patient_graphs.pt"
 ) -> Tuple[Dataset, Dataset, Dataset, int, int]:
+    cache_file = Path(cache_path) if cache_path else None
+    if cache_file and cache_file.exists():
+        print(f"Loading cached PyG Patient Graphs from {cache_file}...")
+        cached_data = torch.load(cache_file, weights_only=False)
+        return (
+            PatientGraphDataset(cached_data["train_graphs"]),
+            PatientGraphDataset(cached_data["val_graphs"]),
+            PatientGraphDataset(cached_data["test_graphs"]),
+            cached_data["num_unique_drugs"],
+            cached_data["tabular_dim"]
+        )
+
     df = pl.read_parquet(data_path)
     
     # Impute missing lab values
@@ -166,6 +179,17 @@ def build_patient_graphs(
             test_graphs.append(row_to_graph(r))
 
     tabular_dim = len(CLINICAL_TABULAR_COLS)
+    if cache_file:
+        print(f"Caching PyG Patient Graphs to {cache_file}...")
+        cache_file.parent.mkdir(parents=True, exist_ok=True)
+        torch.save({
+            "train_graphs": train_graphs,
+            "val_graphs": val_graphs,
+            "test_graphs": test_graphs,
+            "num_unique_drugs": num_unique_drugs,
+            "tabular_dim": tabular_dim
+        }, cache_file)
+
     return (
         PatientGraphDataset(train_graphs),
         PatientGraphDataset(val_graphs),
