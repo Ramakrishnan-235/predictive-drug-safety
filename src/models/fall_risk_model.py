@@ -50,10 +50,20 @@ class MultiTaskRiskLoss(nn.Module):
         )
 
         # 2. Pharmacological safety loss: Regimen DDI coupling penalty
-        # Column index 6 corresponds to normalized wDDI score from NUMERICAL_COLS
+        # Column index 6 corresponds to wDDI score from NUMERICAL_COLS
         probs = torch.sigmoid(logits)
         w_ddi = inputs[:, 6].unsqueeze(1)
-        ddi_penalty = torch.mean(probs * F.relu(w_ddi))
+
+        # Un-center / scale if standardized (negative values from z-scoring), so the penalty applies to all patients
+        if (w_ddi < 0).any():
+            w_ddi_normalized = (w_ddi - w_ddi.min()) / (w_ddi.max() - w_ddi.min() + 1e-8)
+        else:
+            w_ddi_normalized = torch.clamp(w_ddi, 0.0, 1.0)
+
+        # Pharmacological safety constraint:
+        # Penalizes under-predicting fall risk for patients with severe drug-drug interactions.
+        # Enforces that predicted fall probability does not fall below the patient's DDI hazard burden.
+        ddi_penalty = torch.mean(F.relu(w_ddi_normalized - probs))
 
         total_loss = bce_loss + self.gamma_ddi * ddi_penalty
         return total_loss, bce_loss

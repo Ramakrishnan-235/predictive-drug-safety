@@ -82,7 +82,14 @@ def prepare_dataloaders(
     std = np.std(num_train, axis=0) + 1e-8
 
     def transform_data(split_df: pl.DataFrame) -> Tuple[np.ndarray, np.ndarray, List[int]]:
-        num_scaled = (split_df.select(NUMERICAL_COLS).to_numpy() - mean) / std
+        num_raw = split_df.select(NUMERICAL_COLS).to_numpy()
+        num_scaled = (num_raw - mean) / std
+        # w_ddi_score (index 6) is a bounded pharmacological risk score; scale to [0, 1] without negative zero-centering
+        max_ddi = float(np.max(num_train[:, 6]))
+        if max_ddi > 0:
+            num_scaled[:, 6] = np.clip(num_raw[:, 6] / max_ddi, 0.0, 1.0)
+        else:
+            num_scaled[:, 6] = num_raw[:, 6]
         rules = split_df.select(BINARY_RULE_COLS).to_numpy()
         x_all = np.hstack([num_scaled, rules])
         y_all = split_df["fall_target_label"].to_numpy()
