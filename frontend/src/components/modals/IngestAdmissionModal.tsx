@@ -20,8 +20,14 @@ import {
   RefreshCw,
   Check,
   FileText,
+  Search,
+  Plus,
+  Pill,
+  ClipboardList,
+  SlidersHorizontal,
 } from "lucide-react";
 import { Patient, AcuityTier } from "@/types/patient";
+import { searchCuratedDrugs } from "@/lib/drugVocabulary";
 
 interface IngestAdmissionModalProps {
   isOpen: boolean;
@@ -83,6 +89,53 @@ export function IngestAdmissionModal({
       .map((s) => s.trim())
       .filter(Boolean);
   }, [drugsInput]);
+
+  // Type-Ahead & Medication Selector State
+  const [medInputMode, setMedInputMode] = useState<"chips" | "raw">("chips");
+  const [drugSearchQuery, setDrugSearchQuery] = useState("");
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+
+  // Search curated vocabulary
+  const searchResults = useMemo(() => {
+    return searchCuratedDrugs(drugSearchQuery, 10);
+  }, [drugSearchQuery]);
+
+  // Add drug to active regimen
+  const handleAddDrug = useCallback((drugName: string, dose?: string, freq?: string) => {
+    const formatted = [drugName, dose || "", freq || ""].filter(Boolean).join(" ").trim();
+    if (!formatted) return;
+
+    setDrugsInput((prev) => {
+      const existing = prev.split(",").map((s) => s.trim()).filter(Boolean);
+      const alreadyHas = existing.some(
+        (d) => d.toLowerCase().startsWith(drugName.toLowerCase()) || drugName.toLowerCase().startsWith(d.toLowerCase())
+      );
+      if (alreadyHas) return prev;
+      return existing.length > 0 ? `${prev}, ${formatted}` : formatted;
+    });
+
+    setDrugSearchQuery("");
+    setIsDropdownOpen(false);
+  }, []);
+
+  // Remove drug from active regimen
+  const handleRemoveDrug = useCallback((indexToRemove: number) => {
+    setDrugsInput((prev) => {
+      const existing = prev.split(",").map((s) => s.trim()).filter(Boolean);
+      return existing.filter((_, i) => i !== indexToRemove).join(", ");
+    });
+  }, []);
+
+  // Helper to identify FRID class for a drug token
+  const getDrugFridBadge = useCallback((drugStr: string) => {
+    const lower = drugStr.toLowerCase();
+    for (const def of FRID_DEFINITIONS) {
+      if (def.keywords.some((k) => lower.includes(k))) {
+        return def.label.split("&")[0].trim();
+      }
+    }
+    return null;
+  }, []);
 
   // Cockcroft-Gault / CKD-EPI approximate eGFR calculation
   const calculatedEgfr = useMemo(() => {
@@ -838,37 +891,291 @@ export function IngestAdmissionModal({
             </div>
 
             {/* SECTION 3: Active Drug Orders (Graph Node Tokens) */}
-            <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-2xs space-y-2.5">
+            <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-2xs space-y-3">
+              {/* Header */}
               <div className="flex items-center justify-between border-b border-slate-100 pb-2">
                 <div className="flex items-center gap-2 text-xs font-bold text-slate-900">
                   <Layers className="w-4 h-4 text-[#1b3b36]" />
                   <span>3. Active Medication Orders (5,034 Drug Vocabulary)</span>
                 </div>
-                <span className="text-[11px] font-bold text-slate-500">
-                  {parsedDrugs.length} Active Meds
-                </span>
-              </div>
-
-              <textarea
-                rows={2}
-                value={drugsInput}
-                onChange={(e) => setDrugsInput(e.target.value)}
-                placeholder="e.g. Lorazepam 1mg QHS, Furosemide 40mg QAM, Diphenhydramine 25mg PRN..."
-                className="w-full rounded-lg border border-slate-200 p-2.5 text-xs leading-relaxed focus:bg-white focus:border-[#1b3b36] focus:outline-none focus:ring-1 focus:ring-[#1b3b36]"
-              />
-
-              {/* Parsed Drug Chips */}
-              <div className="flex flex-wrap gap-1.5 pt-1">
-                {parsedDrugs.map((drug, i) => (
-                  <span
-                    key={i}
-                    className="inline-flex items-center gap-1 rounded-md bg-slate-100 border border-slate-200 px-2 py-0.5 text-[11px] font-medium text-slate-700 shadow-2xs"
-                  >
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-600" />
-                    {drug}
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-bold text-slate-600 bg-slate-100 px-2 py-0.5 rounded-md">
+                    {parsedDrugs.length} Active Meds
                   </span>
-                ))}
+                  {/* Mode Toggle */}
+                  <button
+                    type="button"
+                    onClick={() => setMedInputMode((m) => (m === "chips" ? "raw" : "chips"))}
+                    className="inline-flex items-center gap-1 rounded-md border border-slate-200 bg-slate-50 hover:bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-700 transition cursor-pointer"
+                    title={medInputMode === "chips" ? "Switch to raw comma-separated text paste" : "Switch to interactive typeahead chips"}
+                  >
+                    {medInputMode === "chips" ? (
+                      <>
+                        <ClipboardList className="w-3 h-3 text-slate-600" />
+                        <span>Paste from EHR</span>
+                      </>
+                    ) : (
+                      <>
+                        <Pill className="w-3 h-3 text-emerald-700" />
+                        <span>Typeahead &amp; Chips</span>
+                      </>
+                    )}
+                  </button>
+                </div>
               </div>
+
+              {medInputMode === "raw" ? (
+                /* RAW EHR / COMMA-SEPARATED MAR PASTE MODE */
+                <div className="space-y-2">
+                  <textarea
+                    rows={3}
+                    value={drugsInput}
+                    onChange={(e) => setDrugsInput(e.target.value)}
+                    placeholder="Paste full medication list or comma-separated orders e.g. Lorazepam 1.0mg QHS, Furosemide 40mg QAM, Diphenhydramine 25mg PRN..."
+                    className="w-full rounded-lg border border-slate-200 p-2.5 text-xs font-mono leading-relaxed focus:bg-white focus:border-[#1b3b36] focus:outline-none focus:ring-1 focus:ring-[#1b3b36]"
+                  />
+                  <div className="flex items-center justify-between text-[11px] text-slate-500">
+                    <span>Parsed {parsedDrugs.length} distinct drug tokens for GNN graph convolution.</span>
+                    <button
+                      type="button"
+                      onClick={() => setMedInputMode("chips")}
+                      className="text-emerald-700 hover:text-emerald-800 font-bold text-xs hover:underline cursor-pointer"
+                    >
+                      Apply &amp; Return to Chips &rarr;
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                /* INTERACTIVE SEARCHABLE TYPE-AHEAD DROPDOWN + CHIPS MODE */
+                <div className="space-y-2.5">
+                  {/* Searchable Combobox Input */}
+                  <div className="relative">
+                    <div className="relative flex items-center">
+                      <Search className="w-3.5 h-3.5 absolute left-3 text-slate-400 pointer-events-none" />
+                      <input
+                        type="text"
+                        value={drugSearchQuery}
+                        onChange={(e) => {
+                          setDrugSearchQuery(e.target.value);
+                          setIsDropdownOpen(true);
+                        }}
+                        onFocus={() => setIsDropdownOpen(true)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            if (searchResults.length > 0) {
+                              const top = searchResults[0];
+                              handleAddDrug(top.name, top.defaultDose, top.defaultFreq);
+                            } else if (drugSearchQuery.trim()) {
+                              handleAddDrug(drugSearchQuery.trim());
+                            }
+                          } else if (e.key === "Escape") {
+                            setIsDropdownOpen(false);
+                          }
+                        }}
+                        placeholder="Search 5,034 drugs by generic or brand (e.g. 'lor', 'furosemide', 'ambien', 'metoprolol')..."
+                        className="w-full pl-8.5 pr-16 py-2 rounded-lg border border-slate-200 bg-slate-50/50 hover:bg-white focus:bg-white text-xs text-slate-900 placeholder:text-slate-400 focus:border-[#1b3b36] focus:outline-none focus:ring-1 focus:ring-[#1b3b36] transition shadow-2xs"
+                      />
+                      <div className="absolute right-2.5 flex items-center gap-1">
+                        <span className="text-[10px] font-mono text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded">
+                          5,034 GNN
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Autocomplete Dropdown Menu */}
+                    {isDropdownOpen && (
+                      <>
+                        <div
+                          className="fixed inset-0 z-10"
+                          onClick={() => setIsDropdownOpen(false)}
+                        />
+                        <div className="absolute z-20 top-full left-0 right-0 mt-1 rounded-xl bg-white border border-slate-200 shadow-xl overflow-hidden max-h-72 overflow-y-auto animate-in fade-in-50 zoom-in-98">
+                          <div className="p-2 border-b border-slate-100 bg-slate-50/80 flex items-center justify-between text-[10px] text-slate-500 font-semibold">
+                            <span>
+                              {drugSearchQuery
+                                ? `Matches for "${drugSearchQuery}"`
+                                : "High-Yield Geriatric & Fall-Risk Medications"}
+                            </span>
+                            <span>{searchResults.length} tokens</span>
+                          </div>
+
+                          <div className="divide-y divide-slate-100">
+                            {searchResults.map((drug) => {
+                              const isAlreadyIn = parsedDrugs.some((d) =>
+                                d.toLowerCase().includes(drug.generic.toLowerCase())
+                              );
+                              return (
+                                <div
+                                  key={drug.id}
+                                  className={`p-2.5 hover:bg-emerald-50/60 transition flex items-center justify-between gap-3 group ${
+                                    isAlreadyIn ? "bg-slate-50/70 opacity-70" : ""
+                                  }`}
+                                >
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-2">
+                                      <span className="font-bold text-xs text-slate-900">
+                                        {drug.name}
+                                      </span>
+                                      {drug.brand && (
+                                        <span className="text-[10px] text-slate-500 italic">
+                                          ({drug.brand})
+                                        </span>
+                                      )}
+                                      {drug.isFrid && (
+                                        <span className="rounded-full bg-rose-100 border border-rose-200 text-rose-800 px-1.5 py-0.2 text-[9px] font-bold">
+                                          FRID Fall Risk
+                                        </span>
+                                      )}
+                                    </div>
+                                    <div className="flex items-center gap-2 mt-0.5 text-[10px] text-slate-500">
+                                      <span className="font-medium text-slate-600">
+                                        {drug.category}
+                                      </span>
+                                      <span>•</span>
+                                      <span>Route: {drug.route}</span>
+                                      {drug.beersWarning && (
+                                        <>
+                                          <span>•</span>
+                                          <span className="text-amber-700 truncate max-w-[240px]">
+                                            AGS Beers Warning
+                                          </span>
+                                        </>
+                                      )}
+                                    </div>
+                                  </div>
+
+                                  {/* Quick Dose Buttons */}
+                                  <div className="flex items-center gap-1 shrink-0">
+                                    {drug.doseOptions.slice(0, 3).map((dose) => (
+                                      <button
+                                        key={dose}
+                                        type="button"
+                                        disabled={isAlreadyIn}
+                                        onClick={() => handleAddDrug(drug.name, dose, drug.defaultFreq)}
+                                        className="px-2 py-1 rounded bg-slate-100 hover:bg-[#1b3b36] hover:text-white text-slate-700 text-[10px] font-semibold transition cursor-pointer disabled:opacity-50"
+                                        title={`Add ${drug.name} ${dose} ${drug.defaultFreq}`}
+                                      >
+                                        +{dose}
+                                      </button>
+                                    ))}
+                                    <button
+                                      type="button"
+                                      disabled={isAlreadyIn}
+                                      onClick={() => handleAddDrug(drug.name, drug.defaultDose, drug.defaultFreq)}
+                                      className="px-2.5 py-1 rounded bg-[#1b3b36] hover:bg-[#152e2a] text-white text-[10px] font-bold shadow-2xs transition cursor-pointer flex items-center gap-1 disabled:opacity-50"
+                                    >
+                                      <Plus className="w-3 h-3 text-emerald-300" />
+                                      <span>{isAlreadyIn ? "In Regimen" : "Add"}</span>
+                                    </button>
+                                  </div>
+                                </div>
+                              );
+                            })}
+
+                            {searchResults.length === 0 && (
+                              <div className="p-4 text-center text-xs text-slate-500">
+                                <p>No matching medications in curated registry for &quot;{drugSearchQuery}&quot;.</p>
+                                <button
+                                  type="button"
+                                  onClick={() => handleAddDrug(drugSearchQuery.trim())}
+                                  className="mt-2 inline-flex items-center gap-1 text-xs font-bold text-emerald-800 hover:underline cursor-pointer"
+                                >
+                                  <Plus className="w-3.5 h-3.5" />
+                                  <span>Add custom drug token &quot;{drugSearchQuery.trim()}&quot; to GNN Regimen</span>
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </>
+                    )}
+                  </div>
+
+                  {/* Active Medication Chips Container */}
+                  <div className="rounded-lg border border-slate-200/80 bg-slate-50/60 p-2.5 min-h-[58px]">
+                    {parsedDrugs.length === 0 ? (
+                      <div className="flex items-center justify-center py-2 text-xs text-slate-400 italic">
+                        No medications added yet. Search above or click quick-add buttons below.
+                      </div>
+                    ) : (
+                      <div className="flex flex-wrap gap-1.5">
+                        {parsedDrugs.map((drug, i) => {
+                          const fridBadge = getDrugFridBadge(drug);
+                          return (
+                            <span
+                              key={i}
+                              className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-xs font-medium shadow-2xs transition ${
+                                fridBadge
+                                  ? "bg-rose-50/90 border-rose-200 text-rose-950 font-semibold"
+                                  : "bg-white border-slate-200 text-slate-800"
+                              }`}
+                            >
+                              <Pill className={`w-3 h-3 shrink-0 ${fridBadge ? "text-rose-600" : "text-emerald-700"}`} />
+                              <span>{drug}</span>
+                              {fridBadge && (
+                                <span className="rounded bg-rose-200/70 text-rose-900 text-[9px] font-bold px-1 py-0.2">
+                                  {fridBadge}
+                                </span>
+                              )}
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveDrug(i)}
+                                className="ml-1 p-0.5 rounded-full hover:bg-slate-200/80 text-slate-400 hover:text-slate-800 transition cursor-pointer"
+                                title={`Remove ${drug}`}
+                              >
+                                <X className="w-3 h-3" />
+                              </button>
+                            </span>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Quick-Add Geriatric Buttons Shelf */}
+                  <div className="flex flex-wrap items-center gap-1.5 pt-0.5 text-[10px]">
+                    <span className="font-semibold text-slate-500 mr-1 flex items-center gap-1 shrink-0">
+                      <Zap className="w-3 h-3 text-amber-500" />
+                      Quick Presets:
+                    </span>
+                    {[
+                      { name: "Lorazepam", dose: "1.0mg", freq: "QHS", frid: true },
+                      { name: "Furosemide", dose: "40mg", freq: "QAM", frid: true },
+                      { name: "Diphenhydramine", dose: "25mg", freq: "PRN", frid: true },
+                      { name: "Hydralazine", dose: "25mg", freq: "TID", frid: true },
+                      { name: "Gabapentin", dose: "300mg", freq: "TID", frid: true },
+                      { name: "Zolpidem", dose: "10mg", freq: "QHS", frid: true },
+                      { name: "Metoprolol", dose: "25mg", freq: "BID", frid: false },
+                      { name: "Lisinopril", dose: "10mg", freq: "Daily", frid: false },
+                    ].map((item, idx) => {
+                      const isAdded = parsedDrugs.some((d) =>
+                        d.toLowerCase().includes(item.name.toLowerCase())
+                      );
+                      return (
+                        <button
+                          key={idx}
+                          type="button"
+                          disabled={isAdded}
+                          onClick={() => handleAddDrug(item.name, item.dose, item.freq)}
+                          className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md border transition cursor-pointer ${
+                            isAdded
+                              ? "bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed"
+                              : item.frid
+                              ? "bg-rose-50 hover:bg-rose-100 text-rose-800 border-rose-200 font-medium"
+                              : "bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-200"
+                          }`}
+                        >
+                          <span className="font-bold">{isAdded ? "✓" : "+"}</span>
+                          <span>
+                            {item.name} {item.dose}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* SECTION 4: Codified FRID Categories & Safety Gates */}

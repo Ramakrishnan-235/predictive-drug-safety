@@ -977,6 +977,38 @@ def get_clinical_rules():
         "rules": CLINICAL_RULES_DATABASE
     }
 
+@app.get("/api/drugs/search")
+def search_drug_vocabulary(q: str = "", limit: int = 25):
+    """Searches the 5,034-drug GNN vocabulary with substring matching."""
+    if gnn_engine is None:
+        return {"query": q, "count": 0, "results": []}
+    
+    query = q.lower().strip()
+    results = []
+    if not query:
+        results = gnn_engine.get_curated_med_list()[:limit]
+    else:
+        # Priority 1: Match in curated high-priority meds
+        curated = gnn_engine.get_curated_med_list()
+        for d in curated:
+            if query in d.lower() and d not in results:
+                results.append(d)
+        
+        # Priority 2: Matches in full 5,034 vocab
+        for d in gnn_engine.drug_to_idx.keys():
+            if query in d.lower():
+                clean_d = d.replace("*nf*", "").replace("*nf", "").strip()
+                if clean_d and clean_d not in results:
+                    results.append(clean_d)
+            if len(results) >= limit:
+                break
+                
+    return {
+        "query": q,
+        "count": len(results),
+        "results": results[:limit]
+    }
+
 @app.post("/api/predict-gnn")
 def run_gnn_prediction(req: PredictGNNRequest):
     """Runs live PyTorch Geometric GNN inference on the drug regimen."""
