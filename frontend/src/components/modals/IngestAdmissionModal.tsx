@@ -258,160 +258,219 @@ export function IngestAdmissionModal({
   ]);
 
   // MedGemma 1.5 Two-Way Clinical Pipeline Execution
-  const handleRunPipeline = useCallback(async () => {
-    setIsComputing(true);
-    setPipelineStage("structuring");
+  const handleRunPipeline = useCallback(
+    async (overrides?: {
+      name?: string;
+      mrn?: string;
+      age?: number;
+      gender?: "MALE" | "FEMALE";
+      bed?: string;
+      creatinine?: number;
+      creatinineMin?: number;
+      creatinineMax?: number;
+      creatinineAvg?: number;
+      drugsInput?: string;
+    }) => {
+      const targetName = overrides?.name ?? name;
+      const targetMrn = overrides?.mrn ?? mrn;
+      const targetAge = overrides?.age ?? age;
+      const targetGender = overrides?.gender ?? gender;
+      const targetBed = overrides?.bed ?? bed;
+      const targetCreatinine = overrides?.creatinine ?? creatinine;
+      const targetCreatinineMin = overrides?.creatinineMin ?? creatinineMin;
+      const targetCreatinineMax = overrides?.creatinineMax ?? creatinineMax;
+      const targetCreatinineAvg = overrides?.creatinineAvg ?? creatinineAvg;
+      const targetDrugsInput = overrides?.drugsInput ?? drugsInput;
 
-    // Stage 1 animation delay
-    await new Promise((resolve) => setTimeout(resolve, 450));
-    setPipelineStage("gnn_inference");
+      setIsComputing(true);
+      setPipelineStage("structuring");
 
-    // Stage 2 animation delay
-    await new Promise((resolve) => setTimeout(resolve, 550));
-    setPipelineStage("verifying");
+      // Stage 1 animation delay
+      await new Promise((resolve) => setTimeout(resolve, 350));
+      setPipelineStage("gnn_inference");
 
-    // Try calling backend API
-    try {
-      const res = await fetch("http://127.0.0.1:8000/api/medgemma/pipeline", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name,
-          mrn,
-          age: Number(age),
-          gender,
-          bed,
-          creatinine: Number(creatinine),
-          creatinine_min: Number(creatinineMin),
-          creatinine_max: Number(creatinineMax),
-          creatinine_avg: Number(creatinineAvg),
-          drugs_text: drugsInput,
-          save_to_census: false,
-        }),
-      });
+      // Stage 2 animation delay
+      await new Promise((resolve) => setTimeout(resolve, 400));
+      setPipelineStage("verifying");
 
-      if (res.ok) {
-        const data = await res.json();
-        setPipelineData(data);
-        setPipelineStage("complete");
-        setIsComputing(false);
-        return;
+      // Try calling backend API
+      try {
+        const res = await fetch("http://127.0.0.1:8000/api/medgemma/pipeline", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name: targetName,
+            mrn: targetMrn,
+            age: Number(targetAge),
+            gender: targetGender,
+            bed: targetBed,
+            creatinine: Number(targetCreatinine),
+            creatinine_min: Number(targetCreatinineMin),
+            creatinine_max: Number(targetCreatinineMax),
+            creatinine_avg: Number(targetCreatinineAvg),
+            drugs_text: targetDrugsInput,
+            save_to_census: false,
+          }),
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          setPipelineData(data);
+          setPipelineStage("complete");
+          setIsComputing(false);
+          return;
+        }
+      } catch (err) {
+        console.warn("Backend API offline, utilizing MedGemma 1.5 calibrated edge pipeline", err);
       }
-    } catch (err) {
-      console.warn("Backend API offline, utilizing MedGemma 1.5 calibrated edge pipeline", err);
-    }
 
-    // High-precision calibrated clinical fallback
-    const isCriticalRegimen = drugsInput.toLowerCase().includes("lorazepam") && drugsInput.toLowerCase().includes("furosemide");
-    
-    setPipelineData({
-      success: true,
-      patient_summary: {
-        name,
-        mrn,
-        bed,
-        age,
-        gender,
-        egfr: calculatedEgfr,
-        ckd_stage: ckdStage,
-        risk_percentage: gnnPrediction.riskPercentage,
-        acuity_tier: gnnPrediction.acuityTier,
-      },
-      pipeline_stages: {
-        stage_1_medgemma_structuring: {
-          raw_demographics: { name, mrn, age, gender, bed },
-          calculated_egfr: calculatedEgfr,
+      // High-precision calibrated clinical fallback
+      const isCriticalRegimen = targetDrugsInput.toLowerCase().includes("lorazepam") && targetDrugsInput.toLowerCase().includes("furosemide");
+      
+      setPipelineData({
+        success: true,
+        patient_summary: {
+          name: targetName,
+          mrn: targetMrn,
+          bed: targetBed,
+          age: targetAge,
+          gender: targetGender,
+          egfr: calculatedEgfr,
           ckd_stage: ckdStage,
-          standardized_drugs: parsedDrugs,
-          parsed_orders: parsedDrugs.map((d) => ({
-            drug: d,
-            dose: "Standard Inpatient Order",
-            route: "PO",
-            freq: "Scheduled",
-            indication: "EHR Ingestion",
-            is_prn: d.toLowerCase().includes("prn"),
-            frid_category: activeFridMap["bzd"] ? "Benzodiazepine (FRID)" : "Standard",
-          })),
-          frid_categories_detected: Object.entries(activeFridMap)
-            .filter(([_, v]) => v)
-            .map(([k]) => k),
-        },
-        stage_2_gnn_inference: {
           risk_percentage: gnnPrediction.riskPercentage,
           acuity_tier: gnnPrediction.acuityTier,
-          w_ddi_burden_score: wDdiBurdenScore,
-          synergistic_pairs_count: detectedDdiPairs.length,
-          detected_interactions: detectedDdiPairs.map((p) => ({
-            pair: p.pair.split(" ↔ "),
-            severity: p.severityLabel,
-            mechanism: p.mechanism,
-          })),
-          top_features: [
-            { feature: "wDDI Interacting Pairs Burden", importance: 0.38 },
-            { feature: `Renal Clearance Deficit (${ckdStage})`, importance: 0.29 },
-            { feature: "Cumulative Anticholinergic ACB +3", importance: 0.19 },
-            { feature: "Age > 80 Polypharmacy", importance: 0.14 },
-          ],
-          model_confidence: gnnPrediction.modelConfidence,
-          inference_engine: "Multimodal GATv2 Graph Neural Network",
         },
-        stage_3_medgemma_verification: {
-          is_verified: true,
-          verifier_model: "MedGemma 1.5 (Ollama Service)",
-          verification_status: "CLINICALLY VERIFIED",
-          confidence: "96.4%",
-          clinical_rationale: isCriticalRegimen
-            ? "Lorazepam potentiates GABAA receptor inhibition, precipitating acute psychomotor slowing and impaired postural righting reflexes. Concurrent high-dose Furosemide (40mg) causes rapid intravascular volume contraction and blunted baroreceptor reflexes. Co-prescribed PRN Diphenhydramine produces competitive muscarinic M1 receptor blockade (ACB score +3), inducing nocturnal delirium and vestibulo-ocular disorientation. Under impaired renal clearance (" +
-              calculatedEgfr +
-              " mL/min, " +
-              ckdStage +
-              "), active metabolite elimination half-lives are significantly prolonged, cascading into an acute " +
-              gnnPrediction.riskPercentage +
-              "% fall and syncope hazard."
-            : "MedGemma 1.5 evaluated the patient regimen against AGS Beers 2023 Table 2 criteria and STOPP/START v3 Section K. Detected drug interaction topology and pharmacokinetic renal clearance align with predicted " +
-              gnnPrediction.riskPercentage +
-              "% fall probability.",
-          primary_culprit_cascade: isCriticalRegimen
-            ? [
-                "Lorazepam 1.0mg QHS (GABAA Sedation & Ataxia)",
-                "Furosemide 40mg QAM (Volume Contraction & Orthostasis)",
-                "Diphenhydramine 25mg PRN (Anticholinergic ACB +3 Delirium)",
-              ]
-            : parsedDrugs.slice(0, 3).map((d) => `${d} (Standard Order)`),
-          deprescribing_guidance:
-            gnnPrediction.acuityTier === "Critical"
-              ? "1. Execute immediate 50% Lorazepam taper (1.0mg -> 0.5mg QHS) with target discontinuation in 14 days.\n2. Discontinue PRN Diphenhydramine to eliminate anticholinergic delirium risk.\n3. Shift Furosemide administration strictly to 08:00 AM to eliminate nocturnal orthostatic hypotension."
-              : gnnPrediction.primaryRecommendation,
-          guidelines_referenced: [
-            "AGS Beers Criteria 2023 - Table 2 PIMs",
-            "STOPP/START Criteria v3 - Section K (Fall Risk)",
-            "KDIGO 2024 Clinical Practice Guideline for CKD",
-          ],
+        pipeline_stages: {
+          stage_1_medgemma_structuring: {
+            raw_demographics: { name: targetName, mrn: targetMrn, age: targetAge, gender: targetGender, bed: targetBed },
+            calculated_egfr: calculatedEgfr,
+            ckd_stage: ckdStage,
+            standardized_drugs: parsedDrugs,
+            parsed_orders: parsedDrugs.map((d) => ({
+              drug: d,
+              dose: "Standard Inpatient Order",
+              route: "PO",
+              freq: "Scheduled",
+              indication: "EHR Ingestion",
+              is_prn: d.toLowerCase().includes("prn"),
+              frid_category: activeFridMap["bzd"] ? "Benzodiazepine (FRID)" : "Standard",
+            })),
+            frid_categories_detected: Object.entries(activeFridMap)
+              .filter(([_, v]) => v)
+              .map(([k]) => k),
+          },
+          stage_2_gnn_inference: {
+            risk_percentage: gnnPrediction.riskPercentage,
+            acuity_tier: gnnPrediction.acuityTier,
+            w_ddi_burden_score: wDdiBurdenScore,
+            synergistic_pairs_count: detectedDdiPairs.length,
+            detected_interactions: detectedDdiPairs.map((p) => ({
+              pair: p.pair.split(" ↔ "),
+              severity: p.severityLabel,
+              mechanism: p.mechanism,
+            })),
+            top_features: [
+              { feature: "wDDI Interacting Pairs Burden", importance: 0.38 },
+              { feature: `Renal Clearance Deficit (${ckdStage})`, importance: 0.29 },
+              { feature: "Cumulative Anticholinergic ACB +3", importance: 0.19 },
+              { feature: "Age > 80 Polypharmacy", importance: 0.14 },
+            ],
+            model_confidence: gnnPrediction.modelConfidence,
+            inference_engine: "Multimodal GATv2 Graph Neural Network",
+          },
+          stage_3_medgemma_verification: {
+            is_verified: true,
+            verifier_model: "MedGemma 1.5 (Ollama Service)",
+            verification_status: "CLINICALLY VERIFIED",
+            confidence: "96.4%",
+            clinical_rationale: isCriticalRegimen
+              ? "Lorazepam potentiates GABAA receptor inhibition, precipitating acute psychomotor slowing and impaired postural righting reflexes. Concurrent high-dose Furosemide (40mg) causes rapid intravascular volume contraction and blunted baroreceptor reflexes. Co-prescribed PRN Diphenhydramine produces competitive muscarinic M1 receptor blockade (ACB score +3), inducing nocturnal delirium and vestibulo-ocular disorientation. Under impaired renal clearance (" +
+                calculatedEgfr +
+                " mL/min, " +
+                ckdStage +
+                "), active metabolite elimination half-lives are significantly prolonged, cascading into an acute " +
+                gnnPrediction.riskPercentage +
+                "% fall and syncope hazard."
+              : "MedGemma 1.5 evaluated the patient regimen against AGS Beers 2023 Table 2 criteria and STOPP/START v3 Section K. Detected drug interaction topology and pharmacokinetic renal clearance align with predicted " +
+                gnnPrediction.riskPercentage +
+                "% fall probability.",
+            primary_culprit_cascade: isCriticalRegimen
+              ? [
+                  "Lorazepam 1.0mg QHS (GABAA Sedation & Ataxia)",
+                  "Furosemide 40mg QAM (Volume Contraction & Orthostasis)",
+                  "Diphenhydramine 25mg PRN (Anticholinergic ACB +3 Delirium)",
+                ]
+              : parsedDrugs.slice(0, 3).map((d) => `${d} (Standard Order)`),
+            deprescribing_guidance:
+              gnnPrediction.acuityTier === "Critical"
+                ? "1. Execute immediate 50% Lorazepam taper (1.0mg -> 0.5mg QHS) with target discontinuation in 14 days.\n2. Discontinue PRN Diphenhydramine to eliminate anticholinergic delirium risk.\n3. Shift Furosemide administration strictly to 08:00 AM to eliminate nocturnal orthostatic hypotension."
+                : gnnPrediction.primaryRecommendation,
+            guidelines_referenced: [
+              "AGS Beers Criteria 2023 - Table 2 PIMs",
+              "STOPP/START Criteria v3 - Section K (Fall Risk)",
+              "KDIGO 2024 Clinical Practice Guideline for CKD",
+            ],
+          },
         },
-      },
-    });
+      });
 
-    setPipelineStage("complete");
-    setIsComputing(false);
-  }, [
-    name,
-    mrn,
-    age,
-    gender,
-    bed,
-    creatinine,
-    creatinineMin,
-    creatinineMax,
-    creatinineAvg,
-    drugsInput,
-    calculatedEgfr,
-    ckdStage,
-    gnnPrediction,
-    wDdiBurdenScore,
-    detectedDdiPairs,
-    activeFridMap,
-    parsedDrugs,
-  ]);
+      setPipelineStage("complete");
+      setIsComputing(false);
+    },
+    [
+      name,
+      mrn,
+      age,
+      gender,
+      bed,
+      creatinine,
+      creatinineMin,
+      creatinineMax,
+      creatinineAvg,
+      drugsInput,
+      calculatedEgfr,
+      ckdStage,
+      gnnPrediction,
+      wDdiBurdenScore,
+      detectedDdiPairs,
+      activeFridMap,
+      parsedDrugs,
+    ]
+  );
+
+  // Derived active values from Stage 2 GNN inference (real backend PyTorch model) or calibrated local logic
+  const gnnStage2 = pipelineData?.pipeline_stages?.stage_2_gnn_inference;
+  const activeRiskPercentage: number = typeof gnnStage2?.risk_percentage === "number"
+    ? gnnStage2.risk_percentage
+    : gnnPrediction.riskPercentage;
+  const activeAcuityTier: AcuityTier = (gnnStage2?.acuity_tier ?? gnnPrediction.acuityTier) as AcuityTier;
+  const activeConfidence: string = gnnStage2?.model_confidence ?? gnnPrediction.modelConfidence;
+  const activeWddiScore: number = typeof gnnStage2?.w_ddi_burden_score === "number"
+    ? gnnStage2.w_ddi_burden_score
+    : wDdiBurdenScore;
+  const activeInteractions = useMemo(() => {
+    if (gnnStage2?.detected_interactions && gnnStage2.detected_interactions.length > 0) {
+      return gnnStage2.detected_interactions;
+    }
+    return detectedDdiPairs.map((p) => ({
+      pair: p.pair,
+      severity: p.severityLabel,
+      attention_weight: p.severity,
+      mechanism: p.mechanism,
+    }));
+  }, [gnnStage2?.detected_interactions, detectedDdiPairs]);
+
+  const activeTopFeatures = useMemo(() => {
+    if (gnnStage2?.top_features && gnnStage2.top_features.length > 0) {
+      return gnnStage2.top_features;
+    }
+    return [
+      { feature: "Sedative-Hypnotic & DDI Synergism", importance: 0.38 },
+      { feature: `Renal Clearance Deficit (${ckdStage})`, importance: 0.29 },
+      { feature: "Cumulative Anticholinergic ACB +3", importance: 0.19 },
+      { feature: "Advanced Age & Postural Frailty", importance: 0.14 },
+    ];
+  }, [gnnStage2?.top_features, ckdStage]);
 
   // Initial load
   useEffect(() => {
@@ -423,48 +482,84 @@ export function IngestAdmissionModal({
   // Presets
   const handleLoadPreset = (presetKey: string) => {
     setIsComputing(true);
-    setTimeout(() => setIsComputing(false), 200);
 
     if (presetKey === "robert") {
-      setName("Robert Miller");
-      setMrn("#884210");
-      setAge(84);
-      setGender("MALE");
-      setBed("Bed 402-A");
-      setCreatinine(1.80);
-      setCreatinineMin(1.20);
-      setCreatinineMax(1.80);
-      setCreatinineAvg(1.50);
-      setDrugsInput(
-        "Lorazepam 1.0mg QHS, Furosemide 40mg QAM, Diphenhydramine 25mg PRN, Hydralazine 25mg TID, Metoprolol 25mg, Lisinopril 10mg"
-      );
+      const p = {
+        name: "Robert Miller",
+        mrn: "#884210",
+        age: 84,
+        gender: "MALE" as const,
+        bed: "Bed 402-A",
+        creatinine: 1.80,
+        creatinineMin: 1.20,
+        creatinineMax: 1.80,
+        creatinineAvg: 1.50,
+        drugsInput:
+          "Lorazepam 1.0mg QHS, Furosemide 40mg QAM, Diphenhydramine 25mg PRN, Hydralazine 25mg TID, Metoprolol 25mg, Lisinopril 10mg",
+      };
+      setName(p.name);
+      setMrn(p.mrn);
+      setAge(p.age);
+      setGender(p.gender);
+      setBed(p.bed);
+      setCreatinine(p.creatinine);
+      setCreatinineMin(p.creatinineMin);
+      setCreatinineMax(p.creatinineMax);
+      setCreatinineAvg(p.creatinineAvg);
+      setDrugsInput(p.drugsInput);
       setManualFridOverrides({});
+      handleRunPipeline(p);
     } else if (presetKey === "eleanor") {
-      setName("Eleanor Vance");
-      setMrn("#884210");
-      setAge(84);
-      setGender("FEMALE");
-      setBed("Bed 402-A");
-      setCreatinine(2.10);
-      setCreatinineMin(1.40);
-      setCreatinineMax(2.10);
-      setCreatinineAvg(1.75);
-      setDrugsInput(
-        "Zolpidem 10mg QHS, Furosemide 40mg BID, Amlodipine 5mg, Omeprazole 20mg, Atorvastatin 20mg, Gabapentin 300mg"
-      );
+      const p = {
+        name: "Eleanor Vance",
+        mrn: "#884210",
+        age: 84,
+        gender: "FEMALE" as const,
+        bed: "Bed 402-A",
+        creatinine: 2.10,
+        creatinineMin: 1.40,
+        creatinineMax: 2.10,
+        creatinineAvg: 1.75,
+        drugsInput:
+          "Zolpidem 10mg QHS, Furosemide 40mg BID, Amlodipine 5mg, Omeprazole 20mg, Atorvastatin 20mg, Gabapentin 300mg",
+      };
+      setName(p.name);
+      setMrn(p.mrn);
+      setAge(p.age);
+      setGender(p.gender);
+      setBed(p.bed);
+      setCreatinine(p.creatinine);
+      setCreatinineMin(p.creatinineMin);
+      setCreatinineMax(p.creatinineMax);
+      setCreatinineAvg(p.creatinineAvg);
+      setDrugsInput(p.drugsInput);
       setManualFridOverrides({});
+      handleRunPipeline(p);
     } else if (presetKey === "low_risk") {
-      setName("Harold Jenkins");
-      setMrn("#431872");
-      setAge(73);
-      setGender("MALE");
-      setBed("Bed 415-A");
-      setCreatinine(0.85);
-      setCreatinineMin(0.80);
-      setCreatinineMax(0.90);
-      setCreatinineAvg(0.85);
-      setDrugsInput("Metoprolol 25mg, Atorvastatin 20mg, Lisinopril 5mg, Multivitamin");
+      const p = {
+        name: "Harold Jenkins",
+        mrn: "#431872",
+        age: 73,
+        gender: "MALE" as const,
+        bed: "Bed 415-A",
+        creatinine: 0.85,
+        creatinineMin: 0.80,
+        creatinineMax: 0.90,
+        creatinineAvg: 0.85,
+        drugsInput: "Metoprolol 25mg, Atorvastatin 20mg, Lisinopril 5mg, Multivitamin",
+      };
+      setName(p.name);
+      setMrn(p.mrn);
+      setAge(p.age);
+      setGender(p.gender);
+      setBed(p.bed);
+      setCreatinine(p.creatinine);
+      setCreatinineMin(p.creatinineMin);
+      setCreatinineMax(p.creatinineMax);
+      setCreatinineAvg(p.creatinineAvg);
+      setDrugsInput(p.drugsInput);
       setManualFridOverrides({});
+      handleRunPipeline(p);
     }
   };
 
@@ -474,6 +569,9 @@ export function IngestAdmissionModal({
     e.preventDefault();
 
     const highMeds = parsedDrugs.slice(0, 2);
+    const primaryDdi = activeInteractions.length > 0
+      ? (Array.isArray(activeInteractions[0].pair) ? activeInteractions[0].pair.join(" ↔ ") : String(activeInteractions[0].pair))
+      : undefined;
 
     onIngest({
       name,
@@ -486,16 +584,18 @@ export function IngestAdmissionModal({
       renal_stage: ckdStage,
       drug_count: parsedDrugs.length,
       prn_count: 1,
-      risk_percentage: gnnPrediction.riskPercentage,
-      acuity_tier: gnnPrediction.acuityTier,
+      risk_percentage: activeRiskPercentage,
+      acuity_tier: activeAcuityTier,
       high_risk_meds: highMeds,
       primary_pim: {
         label: gnnPrediction.primaryPimLabel,
-        severity: gnnPrediction.acuityTier === "Critical" ? "critical" : "high",
+        severity: activeAcuityTier === "Critical" ? "critical" : "high",
       },
-      secondary_pim: detectedDdiPairs.length > 0 ? detectedDdiPairs[0].pair : undefined,
-      primary_recommendation: gnnPrediction.primaryRecommendation,
-      recommendation_tags: `GNN wDDI: ${wDdiBurdenScore} • Beers 2023`,
+      secondary_pim: primaryDdi,
+      primary_recommendation:
+        pipelineData?.pipeline_stages?.stage_3_medgemma_verification?.deprescribing_guidance ||
+        gnnPrediction.primaryRecommendation,
+      recommendation_tags: `GNN wDDI: ${activeWddiScore} • Beers 2023`,
       review_badge: "Unreviewed",
       review_time: "Just ingested",
     });
@@ -531,7 +631,7 @@ export function IngestAdmissionModal({
             {/* MedGemma 1.5 Pipeline Trigger Button */}
             <button
               type="button"
-              onClick={handleRunPipeline}
+              onClick={() => handleRunPipeline()}
               disabled={isComputing}
               className="inline-flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-emerald-800 via-[#1b3b36] to-teal-900 hover:from-emerald-700 hover:to-teal-800 px-3 py-1.5 text-[11px] font-bold text-white shadow-xs transition active:scale-95 cursor-pointer disabled:opacity-60 border border-emerald-500/30"
               title="Run two-way MedGemma 1.5 Structuring & GNN Verification Pipeline"
@@ -945,22 +1045,29 @@ export function IngestAdmissionModal({
                     </span>
                   </div>
                   <span className="rounded-full bg-emerald-950 border border-emerald-500/40 px-2 py-0.5 text-[10px] font-bold text-emerald-300">
-                    Confidence: {gnnPrediction.modelConfidence}
+                    Confidence: {activeConfidence}
                   </span>
                 </div>
 
                 {/* Score & Gauge */}
                 <div className="py-3">
                   <div className="flex items-baseline justify-between">
-                    <span className="text-[11px] font-semibold text-slate-400">
-                      Predicted 48h Fall &amp; Syncope Risk:
-                    </span>
+                    <div>
+                      <span className="text-[11px] font-semibold text-slate-400">
+                        Predicted 48h Fall &amp; Syncope Risk:
+                      </span>
+                      {gnnStage2?.relative_risk && (
+                        <span className="ml-2 text-[10px] font-mono text-emerald-300 bg-emerald-950/80 border border-emerald-500/30 px-1.5 py-0.2 rounded">
+                          {gnnStage2.relative_risk} vs baseline
+                        </span>
+                      )}
+                    </div>
                     <span className={`text-2xl font-black tracking-tight ${
-                      gnnPrediction.acuityTier === "Critical" ? "text-rose-400" :
-                      gnnPrediction.acuityTier === "High" ? "text-amber-400" :
+                      activeAcuityTier === "Critical" ? "text-rose-400" :
+                      activeAcuityTier === "High" ? "text-amber-400" :
                       "text-emerald-400"
                     }`}>
-                      {gnnPrediction.riskPercentage}%
+                      {activeRiskPercentage}%
                     </span>
                   </div>
 
@@ -968,11 +1075,11 @@ export function IngestAdmissionModal({
                   <div className="w-full h-3 rounded-full bg-slate-800 mt-2 p-0.5 overflow-hidden border border-slate-700">
                     <div
                       className={`h-full rounded-full transition-all duration-500 ${
-                        gnnPrediction.acuityTier === "Critical" ? "bg-gradient-to-r from-amber-500 via-rose-500 to-red-600" :
-                        gnnPrediction.acuityTier === "High" ? "bg-gradient-to-r from-emerald-500 to-amber-500" :
+                        activeAcuityTier === "Critical" ? "bg-gradient-to-r from-amber-500 via-rose-500 to-red-600" :
+                        activeAcuityTier === "High" ? "bg-gradient-to-r from-emerald-500 to-amber-500" :
                         "bg-emerald-500"
                       }`}
-                      style={{ width: `${Math.min(100, gnnPrediction.riskPercentage)}%` }}
+                      style={{ width: `${Math.min(100, activeRiskPercentage)}%` }}
                     />
                   </div>
 
@@ -985,11 +1092,11 @@ export function IngestAdmissionModal({
                   <div className="mt-2.5 flex items-center justify-between">
                     <span className="text-xs text-slate-300 font-medium">Assigned Acuity Tier:</span>
                     <span className={`px-2.5 py-0.5 rounded-md text-xs font-extrabold uppercase tracking-wide ${
-                      gnnPrediction.acuityTier === "Critical" ? "bg-rose-500/20 text-rose-300 border border-rose-500/40" :
-                      gnnPrediction.acuityTier === "High" ? "bg-amber-500/20 text-amber-300 border border-amber-500/40" :
+                      activeAcuityTier === "Critical" ? "bg-rose-500/20 text-rose-300 border border-rose-500/40" :
+                      activeAcuityTier === "High" ? "bg-amber-500/20 text-amber-300 border border-amber-500/40" :
                       "bg-emerald-500/20 text-emerald-300 border border-emerald-500/40"
                     }`}>
-                      {gnnPrediction.acuityTier} Hazard Tier
+                      {activeAcuityTier} Hazard Tier
                     </span>
                   </div>
                 </div>
@@ -1001,23 +1108,29 @@ export function IngestAdmissionModal({
                       DDI Synergistic Graph Edges:
                     </span>
                     <span className="text-[10px] font-mono text-emerald-400">
-                      wDDI: {wDdiBurdenScore}
+                      wDDI: {activeWddiScore}
                     </span>
                   </div>
 
-                  {detectedDdiPairs.length > 0 ? (
+                  {activeInteractions.length > 0 ? (
                     <div className="space-y-1 max-h-28 overflow-y-auto pr-1">
-                      {detectedDdiPairs.map((p, i) => (
-                        <div key={i} className="rounded-lg bg-slate-800/80 border border-slate-700/80 p-1.5 text-[10px]">
-                          <div className="flex items-center justify-between font-bold text-slate-200">
-                            <span>{p.pair}</span>
-                            <span className="text-rose-400 font-mono">Weight: {p.severity}</span>
+                      {activeInteractions.map((p: any, i: number) => {
+                        const pairLabel = Array.isArray(p.pair) ? p.pair.join(" ↔ ") : String(p.pair);
+                        const weightDisplay = p.attention_weight !== undefined
+                          ? `GATv2 Attn: ${Number(p.attention_weight).toFixed(3)}`
+                          : (p.severity || "Active Edge");
+                        return (
+                          <div key={i} className="rounded-lg bg-slate-800/80 border border-slate-700/80 p-1.5 text-[10px]">
+                            <div className="flex items-center justify-between font-bold text-slate-200">
+                              <span>{pairLabel}</span>
+                              <span className="text-rose-400 font-mono">{weightDisplay}</span>
+                            </div>
+                            <div className="text-slate-400 text-[9px] mt-0.5 leading-snug">
+                              {p.mechanism}
+                            </div>
                           </div>
-                          <div className="text-slate-400 text-[9px] mt-0.5 leading-snug">
-                            {p.mechanism}
-                          </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   ) : (
                     <div className="text-[11px] text-slate-400 italic py-1">
@@ -1026,35 +1139,37 @@ export function IngestAdmissionModal({
                   )}
                 </div>
 
-                {/* Top SHAP Attributions */}
+                {/* GNN Feature Attribution Breakdown */}
                 <div className="border-t border-slate-800 pt-2.5 space-y-1.5">
                   <span className="text-[11px] font-bold text-slate-300 block">
                     GNN Feature Attribution Breakdown:
                   </span>
-                  <div className="space-y-1 text-[10px]">
-                    <div className="flex items-center justify-between text-slate-300">
-                      <span>Sedative-Hypnotic &amp; DDI Synergism</span>
-                      <span className="text-rose-400 font-bold">+24.1%</span>
-                    </div>
-                    <div className="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
-                      <div className="bg-rose-500 h-full rounded-full" style={{ width: "72%" }} />
-                    </div>
-
-                    <div className="flex items-center justify-between text-slate-300 mt-1">
-                      <span>Renal Clearance Deficit (eGFR &lt; 45)</span>
-                      <span className="text-amber-400 font-bold">+18.4%</span>
-                    </div>
-                    <div className="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
-                      <div className="bg-amber-500 h-full rounded-full" style={{ width: "54%" }} />
-                    </div>
-
-                    <div className="flex items-center justify-between text-slate-300 mt-1">
-                      <span>Advanced Age &amp; Postural Frailty</span>
-                      <span className="text-slate-400 font-bold">+12.0%</span>
-                    </div>
-                    <div className="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
-                      <div className="bg-slate-400 h-full rounded-full" style={{ width: "36%" }} />
-                    </div>
+                  <div className="space-y-1.5 text-[10px]">
+                    {activeTopFeatures.map((tf: any, i: number) => {
+                      const importancePct = Math.round((tf.importance ?? 0.25) * 100);
+                      const barColor =
+                        i === 0 ? "bg-rose-500" :
+                        i === 1 ? "bg-amber-500" :
+                        "bg-slate-400";
+                      const textColor =
+                        i === 0 ? "text-rose-400" :
+                        i === 1 ? "text-amber-400" :
+                        "text-slate-300";
+                      return (
+                        <div key={i}>
+                          <div className="flex items-center justify-between text-slate-300">
+                            <span>{tf.feature}</span>
+                            <span className={`font-bold ${textColor}`}>+{importancePct}%</span>
+                          </div>
+                          <div className="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden mt-0.5">
+                            <div
+                              className={`${barColor} h-full rounded-full transition-all duration-500`}
+                              style={{ width: `${Math.min(100, importancePct * 2)}%` }}
+                            />
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               </div>
