@@ -1,0 +1,32 @@
+[project]
+name = "predictive-drug-safety"
+version = "0.1.0"
+description = "Add your description here"
+requires-python = ">=3.12"
+dependencies = [
+    "captum>=0.9.0",
+    "chromadb>=1.5.9",
+    "duckdb>=1.5.5",
+    "fastapi>=0.141.1",
+    "httpx>=0.28.1",
+    "langchain>=1.4.0",
+    "langchain-community>=0.4.2",
+    "plotly>=7.0.0",
+    "polars>=1.44.1",
+    "pyarrow>=25.0.1",
+    "pydantic>=2.13.5",
+    "scikit-learn>=1.5.0",
+    "streamlit>=1.63.0",
+    "torch>=2.6.0",
+    "torch-geometric>=2.8.0.post1",
+    "tqdm>=4.70.0",
+    "uvicorn>=0.52.4",
+]
+
+[[tool.uv.index]]
+name = "pytorch-cu124"
+url = "https://download.pytorch.org/whl/cu124"
+explicit = true
+
+[tool.uv.sources]
+torch = { index = "pytorch-cu124" }

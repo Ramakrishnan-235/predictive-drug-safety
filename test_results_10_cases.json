@@ -1,0 +1,240 @@
+[
+  {
+    "id": "Case 1",
+    "name": "Negative Control (Baseline Low Risk)",
+    "drugs": [
+      "acetaminophen",
+      "atorvastatin",
+      "levothyroxine"
+    ],
+    "age": 66,
+    "cr": 0.8,
+    "expected_range": "< 15%",
+    "expected_tier": "Low",
+    "real_calibrated": 18.8,
+    "raw_gnn": 30.73,
+    "tier": "Low",
+    "rr": "1.03x",
+    "attended_edges_count": 0,
+    "attended_edges": [],
+    "in_range": false,
+    "diff_text": "+3.8% (above expected max)"
+  },
+  {
+    "id": "Case 2",
+    "name": "Pure Renal Failure Without Sedatives",
+    "drugs": [
+      "insulin",
+      "amlodipine",
+      "sevelamer"
+    ],
+    "age": 79,
+    "cr": 3.1,
+    "expected_range": "20\u201330%",
+    "expected_tier": "Low-to-Moderate",
+    "real_calibrated": 37.3,
+    "raw_gnn": 27.37,
+    "tier": "Moderate",
+    "rr": "2.05x",
+    "attended_edges_count": 0,
+    "attended_edges": [],
+    "in_range": false,
+    "diff_text": "+7.3% (above expected max)"
+  },
+  {
+    "id": "Case 3",
+    "name": "Isolated Benzodiazepine Monotherapy",
+    "drugs": [
+      "temazepam",
+      "omeprazole"
+    ],
+    "age": 71,
+    "cr": 0.9,
+    "expected_range": "35\u201345%",
+    "expected_tier": "Moderate",
+    "real_calibrated": 20.7,
+    "raw_gnn": 1.38,
+    "tier": "Moderate",
+    "rr": "1.14x",
+    "attended_edges_count": 0,
+    "attended_edges": [],
+    "in_range": false,
+    "diff_text": "-14.3% (below expected min)"
+  },
+  {
+    "id": "Case 4",
+    "name": "Hemodynamic Orthostasis Cascade",
+    "drugs": [
+      "furosemide",
+      "carvedilol",
+      "hydralazine",
+      "prazosin"
+    ],
+    "age": 83,
+    "cr": 1.5,
+    "expected_range": "65\u201375%",
+    "expected_tier": "High",
+    "real_calibrated": 52.3,
+    "raw_gnn": 8.95,
+    "tier": "Critical",
+    "rr": "2.87x",
+    "attended_edges_count": 1,
+    "attended_edges": [
+      {
+        "drug_a": "hydralazine",
+        "drug_b": "furosemide",
+        "pair_name": "Hydralazine \u2194 Furosemide",
+        "attention_weight": 0.6821,
+        "severity_weight": 0.75,
+        "adverse_mechanism": "Precipitous hypotension and syncope",
+        "u": 2,
+        "v": 0
+      }
+    ],
+    "in_range": false,
+    "diff_text": "-12.7% (below expected min)"
+  },
+  {
+    "id": "Case 5",
+    "name": "Cumulative Anticholinergic Burden",
+    "drugs": [
+      "diphenhydramine",
+      "oxybutynin",
+      "amitriptyline"
+    ],
+    "age": 86,
+    "cr": 1.1,
+    "expected_range": "68\u201378%",
+    "expected_tier": "High",
+    "real_calibrated": 41.8,
+    "raw_gnn": 13.83,
+    "tier": "High",
+    "rr": "2.3x",
+    "attended_edges_count": 0,
+    "attended_edges": [],
+    "in_range": false,
+    "diff_text": "-26.2% (below expected min)"
+  },
+  {
+    "id": "Case 6",
+    "name": "High-Hazard CNS Quadruple Polypharmacy",
+    "drugs": [
+      "zolpidem",
+      "quetiapine",
+      "pregabalin",
+      "oxycodone"
+    ],
+    "age": 89,
+    "cr": 2.0,
+    "expected_range": "> 85%",
+    "expected_tier": "Critical",
+    "real_calibrated": 69.9,
+    "raw_gnn": 36.98,
+    "tier": "Critical",
+    "rr": "3.84x",
+    "attended_edges_count": 0,
+    "attended_edges": [],
+    "in_range": false,
+    "diff_text": "-15.1% (below expected min)"
+  },
+  {
+    "id": "Case 7",
+    "name": "Renal Clearance Accumulation Hazard",
+    "drugs": [
+      "gabapentin",
+      "digoxin",
+      "metformin"
+    ],
+    "age": 82,
+    "cr": 1.9,
+    "expected_range": "60\u201370%",
+    "expected_tier": "High",
+    "real_calibrated": 53.3,
+    "raw_gnn": 32.4,
+    "tier": "Critical",
+    "rr": "2.93x",
+    "attended_edges_count": 0,
+    "attended_edges": [],
+    "in_range": false,
+    "diff_text": "-6.7% (below expected min)"
+  },
+  {
+    "id": "Case 8",
+    "name": "Extrapyramidal / Dopaminergic Motor Blockade",
+    "drugs": [
+      "haloperidol",
+      "risperidone",
+      "metoclopramide"
+    ],
+    "age": 77,
+    "cr": 1.0,
+    "expected_range": "50\u201360%",
+    "expected_tier": "Moderate-to-High",
+    "real_calibrated": 30.3,
+    "raw_gnn": 9.84,
+    "tier": "Moderate",
+    "rr": "1.66x",
+    "attended_edges_count": 0,
+    "attended_edges": [],
+    "in_range": false,
+    "diff_text": "-19.7% (below expected min)"
+  },
+  {
+    "id": "Case 9",
+    "name": "Age-Weight Sensitivity Check (Boundary Test)",
+    "drugs": [
+      "lorazepam",
+      "furosemide",
+      "metoprolol"
+    ],
+    "age": 58,
+    "cr": 1.5,
+    "expected_range": "45\u201355%",
+    "expected_tier": "Moderate",
+    "real_calibrated": 32.4,
+    "raw_gnn": 7.0,
+    "tier": "Moderate",
+    "rr": "1.78x",
+    "attended_edges_count": 1,
+    "attended_edges": [
+      {
+        "drug_a": "lorazepam",
+        "drug_b": "furosemide",
+        "pair_name": "Lorazepam \u2194 Furosemide",
+        "attention_weight": 0.752,
+        "severity_weight": 0.75,
+        "adverse_mechanism": "Additive sedation + orthostatic hypotension",
+        "u": 0,
+        "v": 1
+      }
+    ],
+    "in_range": false,
+    "diff_text": "-12.6% (below expected min)"
+  },
+  {
+    "id": "Case 10",
+    "name": "Maximum Stress Benchmark (All 8 FRID Classes)",
+    "drugs": [
+      "alprazolam",
+      "olanzapine",
+      "hydroxyzine",
+      "nortriptyline",
+      "doxazosin",
+      "bumetanide",
+      "morphine",
+      "gabapentin"
+    ],
+    "age": 92,
+    "cr": 2.8,
+    "expected_range": "90\u201399%",
+    "expected_tier": "Critical",
+    "real_calibrated": 89.5,
+    "raw_gnn": 9.47,
+    "tier": "Critical",
+    "rr": "4.92x",
+    "attended_edges_count": 0,
+    "attended_edges": [],
+    "in_range": false,
+    "diff_text": "-0.5% (below expected min)"
+  }
+]
