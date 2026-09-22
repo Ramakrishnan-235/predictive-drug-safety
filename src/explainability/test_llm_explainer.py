@@ -6,22 +6,22 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-import polars as pl
-import torch
-from src.explainability.clinical_explainer import MechanisticExplainerEngine
+from src.explainability.clinical_explainer import ClinicalRecommendation
 from src.explainability.llm_explainer import LLMClinicalExplainer
+from src.explainability.langchain_explainer import LangChainClinicalExplainer
 
 
 def run_llm_audit():
     print("=================================================================")
-    print("        LLM CLINICAL EXPLAINER AUDIT & BENCHMARK SUITE          ")
+    print("      MEDGEMMA 1.5-4B & LANGCHAIN CLINICAL EXPLAINER AUDIT       ")
     print("=================================================================\n")
 
     # 1. Initialize Engine
     explainer = LLMClinicalExplainer()
-    print(f"Active LLM Provider Engine: '{explainer.provider}'\n")
+    print(f"Active LLM Provider Engine: '{explainer.provider}'")
+    print(f"Underlying LangChain Framework: '{type(explainer.langchain_explainer).__name__}'\n")
 
-    # 2. Test High-Risk Multimorbidity Patient Profile
+    # 2. Test High-Risk Multimorbidity Patient Profiles
     test_cases = [
         {
             "name": "Case A: Acute Opioid + Benzodiazepine CNS Polypharmacy",
@@ -34,7 +34,7 @@ def run_llm_audit():
                 {"feature": "cns_polypharmacy_flag", "attribution_weight": 0.320}
             ],
             "meds": ["Morphine Sulfate", "Lorazepam", "Zolpidem", "Ondansetron", "Omeprazole", "Furosemide"],
-            "labs": {"age_at_admission": 84, "max_creatinine": 1.25},
+            "labs": {"age_at_admission": 84, "max_creatinine": 1.25, "calculated_egfr": 34},
             "interactions": ["Morphine <-> Lorazepam (GATv2: 0.945)"]
         },
         {
@@ -48,7 +48,7 @@ def run_llm_audit():
                 {"feature": "vasodilators_and_alpha_blockers", "attribution_weight": 0.315}
             ],
             "meds": ["Furosemide", "Hydralazine", "Nitroglycerin", "Metoprolol", "Gabapentin", "Aspirin"],
-            "labs": {"age_at_admission": 79, "max_creatinine": 2.15},
+            "labs": {"age_at_admission": 79, "max_creatinine": 2.15, "calculated_egfr": 26},
             "interactions": ["Furosemide <-> Hydralazine (GATv2: 0.912)"]
         }
     ]
@@ -70,6 +70,11 @@ def run_llm_audit():
             top_interaction_pairs=case["interactions"]
         )
 
+        assert isinstance(rec, ClinicalRecommendation), "Output must strictly conform to ClinicalRecommendation schema"
+        assert rec.hadm_id == case["hadm_id"], "HADM ID must match"
+        assert len(rec.primary_risk_drivers) > 0, "Risk drivers must be populated"
+        assert len(rec.actionable_deprescribing_plan) > 0, "Deprescribing plan must not be empty"
+
         print("\n[Synthesized Pharmacological Mechanism]")
         print(f"  {rec.pharmacological_mechanisms}")
 
@@ -82,7 +87,27 @@ def run_llm_audit():
             print(f"  {idx}. {action}")
         print("-" * 65 + "\n")
 
-    print("All clinical test cases synthesized successfully!")
+    # 3. Multimodal LangChain Execution Test
+    print("=================================================================")
+    print("    TESTING MULTIMODAL MEDGEMMA 1.5-4B LANGCHAIN INTEGRATION    ")
+    print("=================================================================")
+    lc_explainer = LangChainClinicalExplainer()
+    print(f"Testing LangChain multimodal pipeline with prescription chart mock...")
+    sample_image_url = "https://huggingface.co/datasets/huggingface/documentation-images/resolve/main/p-blog/candy.JPG"
+    multimodal_rec = lc_explainer.explain_case(
+        hadm_id=999901,
+        predicted_fall_risk=0.625,
+        risk_stratification="High",
+        top_drivers=[{"feature": "cns_polypharmacy_flag", "attribution_weight": 0.710}],
+        active_medications=["Lorazepam", "Oxycodone", "Furosemide"],
+        clinical_labs={"age_at_admission": 82, "max_creatinine": 1.6},
+        image_input=sample_image_url
+    )
+    assert isinstance(multimodal_rec, ClinicalRecommendation)
+    print(f"Multimodal case execution successful! Risk: {multimodal_rec.predicted_fall_risk*100:.1f}%")
+    print(f"Pharmacological mechanism: {multimodal_rec.pharmacological_mechanisms[:100]}...\n")
+
+    print("All clinical test cases & multimodal checks passed successfully!")
 
 
 if __name__ == "__main__":

@@ -1,11 +1,20 @@
 # LLM Clinical Explainer Configuration
-provider: "ollama"  # options: "auto", "openai", "gemini", "ollama", "groq", "mock"
-model_name: "medgemma:1.5"
+provider: "medgemma"  # options: "medgemma", "langchain", "ollama", "openai", "gemini", "auto"
+model_name: "google/medgemma-1.5-4b-it"
 temperature: 0.1
 max_retries: 2
 timeout_seconds: 30
 
-# Docker / Local Ollama Settings
+# MedGemma 1.5 4B Multimodal HuggingFace Settings
+medgemma:
+  model_id: "google/medgemma-1.5-4b-it"
+  device_map: "auto"
+  torch_dtype: "bfloat16"
+  quantization: "4bit"  # "4bit", "8bit", or "none"
+  max_new_tokens: 512
+  load_mode: "lazy"     # lazy load on first invocation
+
+# Docker / Local Ollama Fallback Settings
 ollama_base_url: "http://localhost:11434"
 ollama_model: "medgemma:1.5"
 
@@ -17,3 +26,4 @@ clinical_context:
     - "Anticholinergic burden and cognitive reserve"
     - "Vasodilator & loop diuretic orthostatic hypotension"
     - "Renal clearance reduction & metabolite accumulation"
+

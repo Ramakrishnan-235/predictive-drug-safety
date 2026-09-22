@@ -22,6 +22,8 @@ class LLMClinicalExplainer:
     def __init__(self, config_path: str = "configs/llm.yaml"):
         self.config = self._load_config(config_path)
         self.provider = self._resolve_provider()
+        from src.explainability.langchain_explainer import LangChainClinicalExplainer
+        self.langchain_explainer = LangChainClinicalExplainer(config_path=config_path)
 
     def _load_config(self, path_str: str) -> Dict[str, Any]:
         p = Path(path_str)
@@ -32,16 +34,18 @@ class LLMClinicalExplainer:
             except Exception:
                 pass
         return {
-            "provider": "auto",
-            "model_name": "auto",
+            "provider": "medgemma",
+            "model_name": "google/medgemma-1.5-4b-it",
             "temperature": 0.1,
             "timeout_seconds": 15,
             "ollama_base_url": "http://localhost:11434",
-            "ollama_model": "llama3.1:8b"
+            "ollama_model": "medgemma:1.5"
         }
 
     def _resolve_provider(self) -> str:
-        req = str(self.config.get("provider", "auto")).lower().strip()
+        req = str(self.config.get("provider", "medgemma")).lower().strip()
+        if req in ["medgemma", "langchain", "huggingface"]:
+            return "medgemma"
         if req == "openai" or (req == "auto" and os.environ.get("OPENAI_API_KEY")):
             return "openai"
         if req in ["gemini", "google"] or (req == "auto" and (os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY"))):
@@ -56,7 +60,8 @@ class LLMClinicalExplainer:
                     return "ollama"
             except Exception:
                 pass
-        return "offline_expert"
+        return "medgemma"
+
 
     def synthesize_explanation(
         self,
@@ -67,9 +72,27 @@ class LLMClinicalExplainer:
         active_medications: List[str],
         clinical_labs: Optional[Dict[str, Any]] = None,
         retrieved_guidelines: Optional[List[str]] = None,
-        top_interaction_pairs: Optional[List[str]] = None
+        top_interaction_pairs: Optional[List[str]] = None,
+        image_input: Optional[Any] = None
     ) -> ClinicalRecommendation:
-        """Synthesizes neural attributions, GNN edges, and retrieved evidence via LLM or expert generator."""
+        """Synthesizes neural attributions, GNN edges, and retrieved evidence via LangChain MedGemma or expert generator."""
+        # 1. Primary: LangChain MedGemma 1.5-4B Multimodal Framework
+        if self.provider in ["medgemma", "langchain"] and hasattr(self, "langchain_explainer") and self.langchain_explainer:
+            try:
+                return self.langchain_explainer.explain_case(
+                    hadm_id=hadm_id,
+                    predicted_fall_risk=predicted_fall_risk,
+                    risk_stratification=risk_stratification,
+                    top_drivers=top_drivers,
+                    active_medications=active_medications,
+                    clinical_labs=clinical_labs,
+                    retrieved_guidelines=retrieved_guidelines,
+                    top_interaction_pairs=top_interaction_pairs,
+                    image_input=image_input
+                )
+            except Exception as e:
+                print(f"[LLMExplainer Warning] LangChain MedGemma failed: {e}. Falling back to standard provider dispatch.")
+
         labs = clinical_labs or {}
         guidelines = retrieved_guidelines or []
         interaction_pairs = top_interaction_pairs or []
@@ -92,8 +115,9 @@ class LLMClinicalExplainer:
             "retrieved_clinical_guidelines": guidelines
         }
 
-        # 1. Try external LLM provider if configured
+        # 2. External LLM provider if configured
         if self.provider == "openai" and os.environ.get("OPENAI_API_KEY"):
+
             try:
                 rec = self._call_openai(prompt_payload)
                 if rec:
