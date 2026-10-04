@@ -1,4 +1,30 @@
 # ==============================================================================
+# Environment Variables, Secrets & Credentials
+# ==============================================================================
+.env
+.env.*
+*.env
+*.env.*
+*.local
+!.env.example
+!**/.env.example
+!**/.env.local.example
+!**/.env.*.example
+
+# Private keys, certificates, & credentials
+*.pem
+*.key
+*.crt
+*.cer
+*.pfx
+*.p12
+*credentials*.json
+*service-account*.json
+*service_account*.json
+id_rsa*
+id_ed25519*
+
+# ==============================================================================
 # Byte-compiled / optimized / DLL files & Python caches
 # ==============================================================================
 __pycache__/
@@ -19,6 +45,7 @@ __pypackages__/
 # Caches, testing, and linting
 # ==============================================================================
 .pytest_cache/
+**/pytest-cache/
 .coverage
 coverage.xml
 *.cover
@@ -30,6 +57,7 @@ htmlcov/
 .hypothesis/
 .ipynb_checkpoints/
 .cache/
+.uv/
 
 # ==============================================================================
 # Virtual environments
@@ -42,30 +70,34 @@ env.bak/
 venv.bak/
 
 # ==============================================================================
-# Environment variables & secrets
+# Frontend, Node.js & Next.js
 # ==============================================================================
-.env
-.env.local
-.env.*.local
-!.env.example
-*.pem
-*.key
+node_modules/
+**/node_modules/
+.next/
+**/.next/
+out/
+**/out/
+.vercel/
+**/.vercel/
+*.tsbuildinfo
+next-env.d.ts
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+.pnp/
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
 
 # ==============================================================================
-# IDEs and editors
+# Datasets and large data files (PhysioNet / DrugBank / DDI / SIDER / PrimeKG)
+# Keep directory layout via .gitkeep; ignore all raw & processed assets
 # ==============================================================================
-.vscode/
-.idea/
-*.swp
-*.swo
-*~
-*.sublime-project
-*.sublime-workspace
-
-# ==============================================================================
-# Datasets and large data files (PhysioNet / DrugBank / DDI — do not commit)
-# ==============================================================================
-# Keep directory layout via .gitkeep; ignore everything else
 data/raw/*
 !data/raw/.gitkeep
 data/processed/*
@@ -74,12 +106,18 @@ data/external/*
 !data/external/.gitkeep
 data/knowledge_base/*
 !data/knowledge_base/.gitkeep
+data/chroma*/
+data/embeddings/
 
-# Nested data dumps (MIMIC-IV, DrugBank, DDInter, TWOSIDES, junctions)
+# Nested data dumps & vocabularies
+data/raw/ClinGraph*/
 data/raw/MIMIC*/
 data/raw/mimic*/
 data/raw/DrugBank/
 data/raw/TwoSide/
+data/raw/OffSider/
+data/raw/PrimeKG/
+data/raw/Sider/
 data/raw/DDI/
 data/raw/hosp/
 data/raw/icu/
@@ -109,19 +147,23 @@ data/raw/hos/
 *.7z
 *.rar
 
-# Database files
+# Databases & Vector Stores
 *.duckdb
 *.duckdb.wal
 *.db
 *.sqlite
 *.sqlite3
+chroma_db/
+chromadb/
+*.chroma
 
 # ==============================================================================
 # Model checkpoints, weights, and serialized artifacts
-# Leading slash = repo-root only, so src/models/ can be committed later
+# Leading slash = repo-root only, so src/models/ source code is committed
 # ==============================================================================
 /checkpoints/
-/models/
+/models/*
+!/models/.gitkeep
 /saved_models/
 *.pt
 *.pth
@@ -133,6 +175,9 @@ data/raw/hos/
 *.pickle
 *.pkl.gz
 *.ckpt
+huggingface/
+transformers/
+medgemma_weights/
 
 # ==============================================================================
 # Experiments, tracking, and logs
@@ -147,6 +192,17 @@ mlruns/
 lightning_logs/
 outputs/
 artifacts/
+
+# ==============================================================================
+# IDEs and editors
+# ==============================================================================
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+*.sublime-project
+*.sublime-workspace
 
 # ==============================================================================
 # Operating system & temporary files
