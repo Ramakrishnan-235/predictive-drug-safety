@@ -1,0 +1,301 @@
+[
+  {
+    "id": "STOPP-K.1",
+    "code": "STOPP-K.1",
+    "category": "FRID",
+    "badge_type": "Hard Safety Gate",
+    "title": "STOPP v3 Section K: Fall-Risk Increasing Drugs (FRIDs)",
+    "subtitle": "Mandates avoidance of sedative hypnotics and high-potency benzodiazepines in patients >=65 with prior documented falls.",
+    "tags": [
+      "Benzodiazepines",
+      "Z-Drugs",
+      "Loop Diuretics"
+    ],
+    "sensitivity": "94.8%",
+    "ward_triggers_30d": 34,
+    "last_audit": "Jan 2026",
+    "full_breadcrumb": "KNOWLEDGE BASE > STOPP/START V3 > SECTION K (FALLS) > RULE #STOPP-K.1",
+    "rule_heading": "STOPP v3 Section K: Benzodiazepines and Z-Drugs in Patients with History of Falls",
+    "rule_id": "CDSS-RULE-FRID-0841",
+    "icd10": "R29.6 (Falls)",
+    "snomed_ct": "418428997",
+    "status": "ACTIVE PRODUCTION GATE",
+    "alert_level": "CRITICAL CONTRAINDICATION",
+    "biological_etiology": "Positive allosteric modulation of GABAA receptor subunits (specifically \u03b11 and \u03b12) induces central psychomotor slowing, impairment of righting reflexes, and delayed reactive postural muscle recruitment. In geriatric patients with reduced neuromuscular reserve and pre-existing subclinical cerebellar or vestibular deficits, peak serum concentrations precipitate acute gait ataxia. When co-administered with orthostatic-inducing agents (e.g., loop diuretics, vasodilators), transient cerebral hypoperfusion exacerbates loss of balance during unassisted nocturnal bed transfers.",
+    "etiology_flow": [
+      {
+        "step": 1,
+        "title": "RECEPTOR ACTION",
+        "desc": "GABAA Agonism"
+      },
+      {
+        "step": 2,
+        "title": "SPINAL REFLEX",
+        "desc": "Delayed Vestibular"
+      },
+      {
+        "step": 3,
+        "title": "POSTURAL DEFICIT",
+        "desc": "Center-of-Mass Lag"
+      },
+      {
+        "step": 4,
+        "title": "END-POINT HAZARD",
+        "desc": "Severe Fracture / Fall"
+      }
+    ],
+    "high_priority_interacting_pairs": [
+      {
+        "primary_drug": "Lorazepam (Benzodiazepine)",
+        "interacting_agent": "Furosemide (Loop Diuretic)",
+        "severity_weight": 1.0,
+        "severity_label": "Major",
+        "clinical_consequence": "Orthostatic syncope, volume depletion + psychomotor sedation",
+        "action": "Auto-Flag Hard Alert",
+        "action_type": "alert"
+      },
+      {
+        "primary_drug": "Zolpidem (Non-BZD Z-Drug)",
+        "interacting_agent": "Diphenhydramine (Antihistamine / ACB +3)",
+        "severity_weight": 0.95,
+        "severity_label": "Major",
+        "clinical_consequence": "Severe additive anticholinergic delirium + nocturnal confusion",
+        "action": "Auto-Flag Hard Alert",
+        "action_type": "alert"
+      },
+      {
+        "primary_drug": "Lorazepam (Benzodiazepine)",
+        "interacting_agent": "Hydralazine (Vasodilator)",
+        "severity_weight": 0.66,
+        "severity_label": "Moderate",
+        "clinical_consequence": "Precipitous orthostatic BP drop, baroreceptor suppression",
+        "action": "Recommended Taper",
+        "action_type": "warning"
+      },
+      {
+        "primary_drug": "Gabapentin (Gabapentinoid)",
+        "interacting_agent": "Oxycodone (Opioid Analgesic)",
+        "severity_weight": 1.0,
+        "severity_label": "Critical",
+        "clinical_consequence": "Respiratory depression, profound sedation, severe ataxia",
+        "action": "Hard CPOE Block",
+        "action_type": "danger"
+      }
+    ],
+    "citations": [
+      {
+        "authors": "O'Mahony D, et al.",
+        "title": "STOPP/START criteria for potentially inappropriate prescribing in older people: version 3.",
+        "journal": "Eur Geriatr Med. 2023;14(4):625-632.",
+        "pmcid": "PMC99281"
+      },
+      {
+        "authors": "2023 AGS Beers Criteria Update Expert Panel.",
+        "title": "American Geriatrics Society 2023 updated AGS Beers Criteria for potentially inappropriate medication use in older adults.",
+        "journal": "J Am Geriatr Soc. 2023;71(7):2052-2081. Table 2 (Sedative-Hypnotics).",
+        "doi": "10.1111/jgs.18372"
+      },
+      {
+        "authors": "Bickel H, et al.",
+        "title": "Additive fall risk of loop diuretics and psychotropic polypharmacy: Prospective hospital cohort.",
+        "journal": "Lancet Healthy Longev. 2024.",
+        "dossier": "SaMD Dossier #V4-22"
+      }
+    ]
+  },
+  {
+    "id": "BEERS-2023.T2",
+    "code": "BEERS-2023.T2",
+    "category": "FRID",
+    "badge_type": "PIM High Priority",
+    "title": "2023 AGS Beers Criteria: Benzodiazepine Avoidance",
+    "subtitle": "Older adults have increased sensitivity to benzodiazepines and decreased metabolism of long-acting agents; increased risk of cognitive impairment, delirium, falls, and motor vehicle crashes.",
+    "tags": [
+      "Lorazepam",
+      "Diazepam",
+      "Clonazepam"
+    ],
+    "sensitivity": "96.2%",
+    "ward_triggers_30d": 42,
+    "last_audit": "Feb 2026",
+    "full_breadcrumb": "KNOWLEDGE BASE > AGS BEERS 2023 > TABLE 2 > PIM-BZD",
+    "rule_heading": "2023 AGS Beers Criteria Table 2: Avoidance of Benzodiazepines in Inpatients >=65",
+    "rule_id": "CDSS-RULE-BEERS-0112",
+    "icd10": "R29.6",
+    "snomed_ct": "418428997",
+    "status": "ACTIVE PRODUCTION GATE",
+    "alert_level": "POTENTIALLY INAPPROPRIATE MEDICATION (PIM)",
+    "biological_etiology": "Age-related pharmacodynamic alterations increase central receptor sensitivity to benzodiazepines. Hepatic oxidation via CYP3A4 is reduced, extending half-lives and metabolite accumulation, leading to protracted daytime sedation and impairment of compensatory stepping responses during sudden postural perturbances.",
+    "etiology_flow": [
+      {
+        "step": 1,
+        "title": "HEPATIC CLEARANCE",
+        "desc": "Reduced CYP3A4 Oxidation"
+      },
+      {
+        "step": 2,
+        "title": "PLASMA ACCUMULATION",
+        "desc": "Sedative Active Metabolites"
+      },
+      {
+        "step": 3,
+        "title": "NEURO-MOTOR",
+        "desc": "Impaired Compensatory Stepping"
+      },
+      {
+        "step": 4,
+        "title": "OUTCOME",
+        "desc": "Unassisted Fall / Hip Fracture"
+      }
+    ],
+    "high_priority_interacting_pairs": [
+      {
+        "primary_drug": "Lorazepam",
+        "interacting_agent": "Furosemide",
+        "severity_weight": 1.0,
+        "severity_label": "Major",
+        "clinical_consequence": "Acute postural hypotension with reduced corrective motor reflexes",
+        "action": "Auto-Flag Hard Alert",
+        "action_type": "alert"
+      }
+    ],
+    "citations": [
+      {
+        "authors": "2023 AGS Beers Criteria Update Expert Panel.",
+        "title": "American Geriatrics Society 2023 updated AGS Beers Criteria.",
+        "journal": "J Am Geriatr Soc. 2023.",
+        "doi": "10.1111/jgs.18372"
+      }
+    ]
+  },
+  {
+    "id": "DDINTER-MAJ.08",
+    "code": "DDINTER-MAJ.08",
+    "category": "DDI",
+    "badge_type": "Pharmacodynamic Synergism",
+    "title": "DDInter Major: CNS Depressants + Antihypertensives",
+    "subtitle": "Synergistic vasodilatory and sedative impairment leading to impaired baroreflex response and postprandial / nocturnal orthostatic collapse.",
+    "tags": [
+      "Furosemide",
+      "Lorazepam",
+      "Hydralazine"
+    ],
+    "sensitivity": "92.1%",
+    "ward_triggers_30d": 89,
+    "last_audit": "Mar 2026",
+    "full_breadcrumb": "KNOWLEDGE BASE > DDINTER CLINICAL > PHARMACODYNAMICS > RULE #DDI-08",
+    "rule_heading": "DDInter Major: Central Sedatives Combined with Potent Volume Depletors",
+    "rule_id": "CDSS-RULE-DDI-0419",
+    "icd10": "I95.1 (Orthostatic Hypotension)",
+    "snomed_ct": "2858002",
+    "status": "ACTIVE PRODUCTION GATE",
+    "alert_level": "HIGH PHARMACODYNAMIC SYNERGISM",
+    "biological_etiology": "Concurrent administration of loop diuretics (Furosemide) reduces circulating plasma volume and suppresses cardiac preload. Co-administered central depressants (Lorazepam) blunt sympathetic vasomotor outflow and baroreceptor tachycardic compensation, producing precipitous cerebral hypoperfusion upon standing.",
+    "etiology_flow": [
+      {
+        "step": 1,
+        "title": "DIURETIC ACTION",
+        "desc": "Volume Depletion & Low Preload"
+      },
+      {
+        "step": 2,
+        "title": "BAROREFLEX",
+        "desc": "Blunted Sympathetic Response"
+      },
+      {
+        "step": 3,
+        "title": "CEREBRAL PERFUSION",
+        "desc": "Acute MAP Nadir (<65 mmHg)"
+      },
+      {
+        "step": 4,
+        "title": "SYNCOPE",
+        "desc": "Transient Loss of Consciousness"
+      }
+    ],
+    "high_priority_interacting_pairs": [
+      {
+        "primary_drug": "Furosemide",
+        "interacting_agent": "Hydralazine",
+        "severity_weight": 0.75,
+        "severity_label": "Major",
+        "clinical_consequence": "Severe compounding of orthostatic blood pressure drops",
+        "action": "Recommended Taper",
+        "action_type": "warning"
+      }
+    ],
+    "citations": [
+      {
+        "authors": "DDInter Research Consortium.",
+        "title": "Clinical drug interaction knowledgebase for adverse outcome prediction.",
+        "journal": "Nucleic Acids Res. 2022.",
+        "pmcid": "PMC8728219"
+      }
+    ]
+  },
+  {
+    "id": "RENAL-CKD.3B",
+    "code": "RENAL-CKD.3B",
+    "category": "Renal",
+    "badge_type": "Pharmacokinetic Guardrail",
+    "title": "Renal Adjustment: Serum Creatinine > 1.5 mg/dL",
+    "subtitle": "Automated dose-taper alerts when eGFR drops below 45 mL/min/1.73m\u00b2 (CKD Stage 3b) for renally cleared neuro-active medications.",
+    "tags": [
+      "Gabapentin",
+      "Digoxin",
+      "Levetiracetam"
+    ],
+    "sensitivity": "98.5%",
+    "ward_triggers_30d": 56,
+    "last_audit": "Apr 2026",
+    "full_breadcrumb": "KNOWLEDGE BASE > RENAL DOSING > KDIGO 2024 > CKD-STAGE-3B",
+    "rule_heading": "KDIGO 2024 Stage 3b Renal Guardrail for Geriatric Inpatients",
+    "rule_id": "CDSS-RULE-RENAL-0231",
+    "icd10": "N18.32 (CKD Stage 3b)",
+    "snomed_ct": "433144002",
+    "status": "ACTIVE PRODUCTION GATE",
+    "alert_level": "RENAL CLEARANCE HAZARD",
+    "biological_etiology": "Glomerular filtration rates below 45 mL/min dramatically retard the elimination kinetics of polar drug metabolites. Sedatives and gabapentinoids accumulate exponentially in systemic circulation, causing profound lethargy, delayed arousal, and severe nocturnal myoclonus or ataxia.",
+    "etiology_flow": [
+      {
+        "step": 1,
+        "title": "GFR DECLINE",
+        "desc": "eGFR < 45 mL/min"
+      },
+      {
+        "step": 2,
+        "title": "METABOLITE ACCUMULATION",
+        "desc": "Extended Elimination Half-Life"
+      },
+      {
+        "step": 3,
+        "title": "CNS EXPOSURE",
+        "desc": "Compounded Sedation & Ataxia"
+      },
+      {
+        "step": 4,
+        "title": "TOXICITY",
+        "desc": "Over-Sedation & Nocturnal Falls"
+      }
+    ],
+    "high_priority_interacting_pairs": [
+      {
+        "primary_drug": "Gabapentin",
+        "interacting_agent": "Renal Impairment (CrCl < 30)",
+        "severity_weight": 0.9,
+        "severity_label": "Major",
+        "clinical_consequence": "Profound neurotoxicity and sedation if dose unadjusted",
+        "action": "Auto-Flag Hard Alert",
+        "action_type": "alert"
+      }
+    ],
+    "citations": [
+      {
+        "authors": "KDIGO Clinical Practice Guideline Working Group.",
+        "title": "Kidney Disease: Improving Global Outcomes (KDIGO) 2024 Clinical Practice Guideline for the Evaluation and Management of Chronic Kidney Disease.",
+        "journal": "Kidney Int. 2024;105(4S):S117-S314.",
+        "doi": "10.1016/j.kint.2023.10.018"
+      }
+    ]
+  }
+]

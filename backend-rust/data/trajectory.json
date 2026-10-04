@@ -1,0 +1,256 @@
+{
+  "patient_id": "994201",
+  "timeline_range": "May 2023 - Apr 2024 (12 Months)",
+  "months": [
+    "M1 (May '23)",
+    "M2 (Jun '23)",
+    "M3 (Jul '23)",
+    "M4 (Aug '23)",
+    "M5 (Sep '23)",
+    "M6 (Oct '23)",
+    "M7 (Nov '23)",
+    "M8 (Dec '23)",
+    "M9 (Jan '24)",
+    "M10 (Feb '24)",
+    "M11 (Mar '24)",
+    "M12 (Apr '24 Now)"
+  ],
+  "clinical_events": [
+    {
+      "month_idx": 7,
+      "title": "Dec 14 (M8): Mechanical Fall (ED)",
+      "subtitle": "Sutured lac, # rule-out",
+      "type": "fall",
+      "tag": "Fall #1"
+    },
+    {
+      "month_idx": 10,
+      "title": "Mar 02 (M11): Bathroom Syncope",
+      "subtitle": "Postural drop -22 mmHg",
+      "type": "syncope",
+      "tag": "Fall #2"
+    },
+    {
+      "month_idx": 11,
+      "title": "Apr 18: Ward 4B SMR",
+      "subtitle": "Current Inpatient Admission",
+      "type": "current",
+      "tag": "Active"
+    }
+  ],
+  "prescription_swimlanes": [
+    {
+      "drug_name": "Lorazepam PO",
+      "category": "Benzodiazepine (Sedative)",
+      "badge": "BEERS",
+      "segments": [
+        {
+          "start": 0,
+          "end": 4,
+          "dose": "0.5 mg QHS (Insomnia)",
+          "type": "stable"
+        },
+        {
+          "start": 4,
+          "end": 11,
+          "dose": "1.0 mg QHS (Dose Doubled by PCP)",
+          "type": "titrated_up",
+          "alert": "PIM Cascade Lead"
+        }
+      ]
+    },
+    {
+      "drug_name": "Furosemide PO",
+      "category": "Loop Diuretic",
+      "badge": "M7 START",
+      "segments": [
+        {
+          "start": 6,
+          "end": 11,
+          "dose": "40 mg QAM (HF Peripheral Edema)",
+          "type": "cascade_reactive",
+          "alert": "Volume Depletion"
+        }
+      ]
+    },
+    {
+      "drug_name": "Diphenhydramine OTC",
+      "category": "Antihistamine (H1)",
+      "badge": "ACB +3",
+      "segments": [
+        {
+          "start": 3,
+          "end": 4,
+          "dose": "25mg",
+          "type": "intermittent"
+        },
+        {
+          "start": 5,
+          "end": 6,
+          "dose": "25mg",
+          "type": "intermittent"
+        },
+        {
+          "start": 8,
+          "end": 9,
+          "dose": "25mg",
+          "type": "intermittent"
+        },
+        {
+          "start": 9,
+          "end": 11,
+          "dose": "25 mg PRN OTC (Sleep Aid)",
+          "type": "titrated_up",
+          "alert": "DELIRIUM RISK"
+        }
+      ]
+    },
+    {
+      "drug_name": "Hydralazine PO",
+      "category": "Vasodilator (Reactive)",
+      "badge": "CASCADE 4th",
+      "segments": [
+        {
+          "start": 7,
+          "end": 11,
+          "dose": "25 mg TID (Reactive for Diuretic BP Fluctuations)",
+          "type": "cascade_reactive",
+          "alert": "Cascade Step 4"
+        }
+      ]
+    }
+  ],
+  "renal_biomarkers": {
+    "egfr_curve": [
+      78,
+      76,
+      75,
+      74,
+      68,
+      62,
+      45,
+      38,
+      36,
+      34,
+      32,
+      31
+    ],
+    "creatinine_curve": [
+      0.9,
+      0.92,
+      0.95,
+      0.98,
+      1.1,
+      1.25,
+      1.5,
+      1.65,
+      1.68,
+      1.72,
+      1.76,
+      1.8
+    ],
+    "ckd_3b_threshold_egfr": 45,
+    "acute_event_callout": {
+      "month": "M7 - M8",
+      "title": "Acute eGFR Drop (-27 mL/min)",
+      "text": "Rapid clearance decline follows Furosemide initiation + Lorazepam titration. Creatinine surges 1.2 -> 1.5 mg/dL."
+    }
+  },
+  "fall_risk_curve": [
+    {
+      "month": "M1",
+      "risk": 12.4
+    },
+    {
+      "month": "M2",
+      "risk": 13.1
+    },
+    {
+      "month": "M3",
+      "risk": 14.0
+    },
+    {
+      "month": "M4",
+      "risk": 15.2
+    },
+    {
+      "month": "M5",
+      "risk": 24.0
+    },
+    {
+      "month": "M6",
+      "risk": 28.5
+    },
+    {
+      "month": "M7",
+      "risk": 38.0
+    },
+    {
+      "month": "M8",
+      "risk": 49.5,
+      "event": "Fall #1"
+    },
+    {
+      "month": "M9",
+      "risk": 52.0
+    },
+    {
+      "month": "M10",
+      "risk": 55.4
+    },
+    {
+      "month": "M11",
+      "risk": 63.8,
+      "event": "Bathroom Syncope"
+    },
+    {
+      "month": "M12",
+      "risk": 68.4,
+      "event": "Peak"
+    }
+  ],
+  "prescribing_cascade_steps": [
+    {
+      "step": 1,
+      "title": "Lorazepam Titration (1.0 mg QHS)",
+      "timing": "MONTH 5",
+      "description": "Triggered daytime motor ataxia, somnolence & reduced clearance"
+    },
+    {
+      "step": 2,
+      "title": "Furosemide Added (40 mg QAM)",
+      "timing": "MONTH 7",
+      "description": "Orthostatic dehydration + prerenal azotemia"
+    },
+    {
+      "step": 3,
+      "title": "Renal Function Collapse (eGFR 78 -> 31 mL/min)",
+      "timing": "M7 - M8",
+      "description": "Drug accumulation of sedative metabolites + orthostatic hypotension"
+    },
+    {
+      "step": 4,
+      "title": "Hydralazine 25mg TID + 2 Acute Falls",
+      "timing": "M8 & M11",
+      "description": "Reactive prescribing for fluctuating BP leads to ED Visit and Bathroom Syncope"
+    }
+  ],
+  "prescribing_cascade_summary": "Trajectory Etiology: The patient's fall probability accelerated from 12% to 68.4% primarily following the addition of Furosemide to escalated Lorazepam. Prerenal dehydration precipitated acute drug accumulation and orthostatic instability.",
+  "targeted_deprescribing_plan": [
+    {
+      "priority": "URGENT",
+      "title": "De-escalate Lorazepam to 0.5 mg",
+      "description": "Reverse Month 5 titration; transition to non-pharmacological sleep hygiene protocol."
+    },
+    {
+      "priority": "MED REVIEW",
+      "title": "Re-evaluate Furosemide 40 mg",
+      "description": "Check dry weight & lower extremity edema. Consider stepping down to 20 mg PO with daily weights to restore renal perfusion."
+    },
+    {
+      "priority": "STOPP",
+      "title": "Eliminate OTC Diphenhydramine",
+      "description": "Eliminate high-risk anticholinergic burden (ACB +3) to protect cognitive reserve and mitigate acute delirium."
+    }
+  ]
+}

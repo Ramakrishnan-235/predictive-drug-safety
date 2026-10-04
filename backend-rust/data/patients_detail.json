@@ -1,0 +1,372 @@
+{
+  "994201": {
+    "hadm_id": 994201,
+    "mrn": "#994201",
+    "name": "Robert Miller",
+    "age": 84,
+    "gender": "MALE",
+    "los_days": 4,
+    "code_status": "Full Code",
+    "ward": "Geriatric Ward 4B",
+    "bed": "Bed 401A (Acute Care 4B)",
+    "attending": "Dr. Sarah Chen, MD",
+    "admission_date": "2026-04-14",
+    "acuity_tier": "Critical",
+    "risk_percentage": 68.4,
+    "ward_baseline_pct": 18.2,
+    "elevation_multiplier": "3.76x",
+    "model_confidence": "94.8%",
+    "model_name": "Gradient Boosted Survival Tree \u2022 AUROC 0.89",
+    "renal_clearance": {
+      "creatinine": 1.8,
+      "creatinine_unit": "mg/dL",
+      "egfr": 31,
+      "stage": "CKD 3b",
+      "crcl": 29,
+      "crcl_unit": "mL/min"
+    },
+    "anthropometry": {
+      "weight_kg": 72.4,
+      "bmi": 24.1
+    },
+    "postural_hemodynamics": {
+      "supine_bp": "118/74",
+      "standing_bp": "100/62",
+      "drop_mmhg": -18,
+      "heart_rate": 64,
+      "status": "Orthostatic Hypotension Confirmed"
+    },
+    "shap_attributions": [
+      {
+        "feature": "wDDI Regimen Burden: Synergistic GABA-A & Volume Depletion",
+        "impact_weight": 0.218,
+        "detail": "Lorazepam + Furosemide drug-drug-disease interaction loop"
+      },
+      {
+        "feature": "Serum Creatinine Elevation (Reduced Drug Clearance)",
+        "impact_weight": 0.174,
+        "detail": "eGFR declined 42 -> 31 mL/min/1.73m\u00b2 over prior 72 hours"
+      },
+      {
+        "feature": "CNS Polypharmacy Active (Sedation / Ataxia Risk)",
+        "impact_weight": 0.13,
+        "detail": "Concurrent central nervous system sedatives compounded by PRN Diphenhydramine"
+      },
+      {
+        "feature": "Loop Diuretic Initiation (Acute Orthostasis & Nocturia)",
+        "impact_weight": 0.092,
+        "detail": "Furosemide 40 mg morning dosing inducing recurrent nocturnal unassisted transfers"
+      }
+    ],
+    "clinical_rationale": "Co-administration of Lorazepam (GABA-A positive allosteric modulator) with Furosemide precipitates acute orthostatic cerebral hypoperfusion upon standing. Impaired renal clearance (CrCl 29 mL/min) extends sedative active metabolite half-life, causing daytime gait ataxia and impaired balance recovery during nocturnal voiding.",
+    "guidelines": [
+      {
+        "name": "2023 AGS Beers Criteria Table 2: Sedative-Hypnotics",
+        "tag": "BEERS"
+      },
+      {
+        "name": "STOPP v3 Section K: Fall-Risk Drugs (FRIDs)",
+        "tag": "STOPP"
+      },
+      {
+        "name": "KDIGO 2024 Dose Adjustment (Stage 3b)",
+        "tag": "KDIGO"
+      }
+    ],
+    "circadian_profile": {
+      "peak_risk_window": "02:00 - 05:00",
+      "points": [
+        {
+          "hour": "20:00",
+          "map_nadir": 88,
+          "sedative_cmax": 25,
+          "nocturnal_transfer": false
+        },
+        {
+          "hour": "23:00",
+          "map_nadir": 84,
+          "sedative_cmax": 65,
+          "nocturnal_transfer": false
+        },
+        {
+          "hour": "02:00",
+          "map_nadir": 74,
+          "sedative_cmax": 92,
+          "nocturnal_transfer": true
+        },
+        {
+          "hour": "04:00",
+          "map_nadir": 71,
+          "sedative_cmax": 90,
+          "nocturnal_transfer": true
+        },
+        {
+          "hour": "07:00",
+          "map_nadir": 82,
+          "sedative_cmax": 50,
+          "nocturnal_transfer": false
+        },
+        {
+          "hour": "10:00",
+          "map_nadir": 89,
+          "sedative_cmax": 20,
+          "nocturnal_transfer": false
+        }
+      ]
+    },
+    "active_medications": [
+      {
+        "id": "med-1",
+        "name": "Lorazepam 1.0 mg PO",
+        "generic_name": "lorazepam",
+        "priority_badge": "FRID Priority 1",
+        "severity_type": "critical",
+        "route_timing": "Route: Oral \u2022 QHS (Every Bedtime)",
+        "badges": [
+          "Beers PIM Alert",
+          "DDI w/ Furosemide"
+        ],
+        "warning": "Metabolite accumulation risk with GFR < 30 mL/min",
+        "is_monitored": true
+      },
+      {
+        "id": "med-2",
+        "name": "Furosemide 40 mg PO",
+        "generic_name": "furosemide",
+        "priority_badge": "FRID Priority 2",
+        "severity_type": "warning",
+        "route_timing": "Route: Oral \u2022 QAM (Every Morning)",
+        "badges": [
+          "Loop Diuretic",
+          "Volume Depletion / Orthostasis"
+        ],
+        "warning": "Last dose: 08:00 AM \u2022 Indication: CHF fluid management",
+        "is_monitored": true
+      },
+      {
+        "id": "med-3",
+        "name": "Diphenhydramine 25 mg PO",
+        "generic_name": "diphenhydramine",
+        "priority_badge": "ACB High (+3)",
+        "severity_type": "danger",
+        "route_timing": "Route: Oral \u2022 PRN QHS (Nightly Insomnia)",
+        "badges": [
+          "High Delirium Hazard",
+          "Anticholinergic Toxicity"
+        ],
+        "warning": "Contraindicated in older adults with mild cognitive impairment",
+        "is_monitored": true
+      },
+      {
+        "id": "med-4",
+        "name": "Metoprolol Succinate 50 mg",
+        "generic_name": "metoprolol",
+        "priority_badge": "Monitored",
+        "severity_type": "info",
+        "route_timing": "Route: Oral \u2022 QD (Daily)",
+        "badges": [
+          "Beta-1 Selective",
+          "Postural Bradycardia Check"
+        ],
+        "warning": null,
+        "is_monitored": true
+      }
+    ],
+    "chronic_stable_medications": [
+      "Atorvastatin 20 mg PO QD",
+      "Omeprazole 20 mg PO QD",
+      "Acetaminophen 650 mg PO Q8H PRN",
+      "Lisinopril 5 mg PO QD",
+      "Aspirin 81 mg PO QD",
+      "Multivitamin 1 tab PO QD",
+      "Polyethylene Glycol 17g PO QD PRN",
+      "Cyanocobalamin (B12) 1000 mcg PO QD",
+      "Artificial Tears 1 gtt OU QID PRN",
+      "Cholecalciferol (Vit D3) 1000 IU PO QD"
+    ],
+    "deprescribing_plans": [
+      {
+        "id": "plan_a",
+        "title": "Plan A: Taper Lorazepam by 50%",
+        "risk_delta_label": "-22.4% Fall Risk",
+        "risk_delta_type": "success",
+        "description": "Step down from 1.0 mg to 0.5 mg PO QHS x 3 nights. Initiate nursing sleep protocol (dimming, noise reduction).",
+        "impact_metric": "New predicted fall rate: 46.0%",
+        "action_button": "Queue Taper Order",
+        "is_queued": false
+      },
+      {
+        "id": "plan_b",
+        "title": "Plan B: Deprescribe PRN Diphenhydramine",
+        "risk_delta_label": "Delirium Prevention",
+        "risk_delta_type": "danger",
+        "description": "Deprescribe antihistamine order. Substitute Melatonin 1.0 mg PO QHS if needed. Eliminates +3 Anticholinergic Cognitive Burden.",
+        "impact_metric": "ACB Score: 4 -> 1",
+        "action_button": "Queue Discontinuation",
+        "is_queued": false
+      },
+      {
+        "id": "plan_c",
+        "title": "Plan C: Schedule Orthostatic BP & Timed Diuresis",
+        "risk_delta_label": "Hemodynamics",
+        "risk_delta_type": "neutral",
+        "description": "Enforce strict 08:00 AM Furosemide administration; prohibit after 14:00. Order nursing orthostatic standing vitals TID.",
+        "impact_metric": "Reduces nocturnal bed transfers",
+        "action_button": "Queue Protocol",
+        "is_queued": false
+      }
+    ]
+  },
+  "994202": {
+    "hadm_id": 994202,
+    "mrn": "#994202",
+    "name": "Margaret Davis",
+    "age": 79,
+    "gender": "FEMALE",
+    "los_days": 2,
+    "code_status": "Full Code",
+    "ward": "Geriatric Ward 4B",
+    "bed": "Bed 402B",
+    "attending": "Dr. Sarah Chen, MD",
+    "admission_date": "2026-04-16",
+    "acuity_tier": "High",
+    "risk_percentage": 44.2,
+    "ward_baseline_pct": 18.2,
+    "elevation_multiplier": "2.43x",
+    "model_confidence": "91.2%",
+    "model_name": "Gradient Boosted Survival Tree \u2022 AUROC 0.89",
+    "renal_clearance": {
+      "creatinine": 1.35,
+      "creatinine_unit": "mg/dL",
+      "egfr": 46,
+      "stage": "CKD 3a",
+      "crcl": 42,
+      "crcl_unit": "mL/min"
+    },
+    "anthropometry": {
+      "weight_kg": 64.0,
+      "bmi": 23.2
+    },
+    "postural_hemodynamics": {
+      "supine_bp": "126/80",
+      "standing_bp": "114/72",
+      "drop_mmhg": -12,
+      "heart_rate": 72,
+      "status": "Mild Postural Drop"
+    }
+  },
+  "994203": {
+    "hadm_id": 994203,
+    "mrn": "#994203",
+    "name": "Arthur Pendelton",
+    "age": 86,
+    "gender": "MALE",
+    "los_days": 6,
+    "code_status": "DNR/DNI",
+    "ward": "Geriatric Ward 4B",
+    "bed": "Bed 405A",
+    "attending": "Dr. Sarah Chen, MD",
+    "admission_date": "2026-04-12",
+    "acuity_tier": "Critical",
+    "risk_percentage": 62.1,
+    "ward_baseline_pct": 18.2,
+    "elevation_multiplier": "3.41x",
+    "model_confidence": "95.0%",
+    "model_name": "Gradient Boosted Survival Tree \u2022 AUROC 0.89",
+    "renal_clearance": {
+      "creatinine": 2.1,
+      "creatinine_unit": "mg/dL",
+      "egfr": 26,
+      "stage": "CKD 4",
+      "crcl": 22,
+      "crcl_unit": "mL/min"
+    },
+    "anthropometry": {
+      "weight_kg": 80.1,
+      "bmi": 26.5
+    },
+    "postural_hemodynamics": {
+      "supine_bp": "110/68",
+      "standing_bp": "90/58",
+      "drop_mmhg": -20,
+      "heart_rate": 60,
+      "status": "Severe Orthostatic Hypotension"
+    }
+  },
+  "994204": {
+    "hadm_id": 994204,
+    "mrn": "#994204",
+    "name": "Eleanor Vance",
+    "age": 76,
+    "gender": "FEMALE",
+    "los_days": 1,
+    "code_status": "Full Code",
+    "ward": "Geriatric Ward 4B",
+    "bed": "Bed 408A",
+    "attending": "Dr. Sarah Chen, MD",
+    "admission_date": "2026-04-17",
+    "acuity_tier": "Moderate",
+    "risk_percentage": 22.8,
+    "ward_baseline_pct": 18.2,
+    "elevation_multiplier": "1.25x",
+    "model_confidence": "89.4%",
+    "model_name": "Gradient Boosted Survival Tree \u2022 AUROC 0.89",
+    "renal_clearance": {
+      "creatinine": 0.95,
+      "creatinine_unit": "mg/dL",
+      "egfr": 68,
+      "stage": "CKD 2",
+      "crcl": 62,
+      "crcl_unit": "mL/min"
+    },
+    "anthropometry": {
+      "weight_kg": 58.5,
+      "bmi": 22.0
+    },
+    "postural_hemodynamics": {
+      "supine_bp": "130/82",
+      "standing_bp": "125/78",
+      "drop_mmhg": -5,
+      "heart_rate": 70,
+      "status": "Normal Postural Reflex"
+    }
+  },
+  "994205": {
+    "hadm_id": 994205,
+    "mrn": "#994205",
+    "name": "Harold Finch",
+    "age": 81,
+    "gender": "MALE",
+    "los_days": 3,
+    "code_status": "Full Code",
+    "ward": "Geriatric Ward 4B",
+    "bed": "Bed 410B",
+    "attending": "Dr. Sarah Chen, MD",
+    "admission_date": "2026-04-15",
+    "acuity_tier": "Low",
+    "risk_percentage": 8.5,
+    "ward_baseline_pct": 18.2,
+    "elevation_multiplier": "0.47x",
+    "model_confidence": "96.1%",
+    "model_name": "Gradient Boosted Survival Tree \u2022 AUROC 0.89",
+    "renal_clearance": {
+      "creatinine": 0.85,
+      "creatinine_unit": "mg/dL",
+      "egfr": 79,
+      "stage": "Normal",
+      "crcl": 74,
+      "crcl_unit": "mL/min"
+    },
+    "anthropometry": {
+      "weight_kg": 75.0,
+      "bmi": 24.5
+    },
+    "postural_hemodynamics": {
+      "supine_bp": "122/78",
+      "standing_bp": "120/76",
+      "drop_mmhg": -2,
+      "heart_rate": 68,
+      "status": "Normal Postural Reflex"
+    }
+  }
+}

@@ -1,0 +1,32 @@
+[
+  {
+    "id": "AUD-20260418-0912",
+    "timestamp": "2026-04-18T09:12:44Z",
+    "patient_id": "994201",
+    "patient_name": "Robert Miller",
+    "action": "EHR Real-Time Synchronization",
+    "actor": "System Automation / HL7 FHIR Stream",
+    "details": "Synchronized 14 active medication orders and latest serum creatinine (1.80 mg/dL).",
+    "status": "Logged"
+  },
+  {
+    "id": "AUD-20260418-0914",
+    "timestamp": "2026-04-18T09:14:02Z",
+    "patient_id": "994201",
+    "patient_name": "Robert Miller",
+    "action": "GNN Fall Risk Inference Executed",
+    "actor": "GeriSafe Acuity Engine v2.4",
+    "details": "Calculated 68.4% acute fall risk (<48h). Hard safety gates flagged for Beers PIM & STOPP v3 Section K.",
+    "status": "Alert Active"
+  },
+  {
+    "id": "AUD-20260418-0845",
+    "timestamp": "2026-04-18T08:45:10Z",
+    "patient_id": "994202",
+    "patient_name": "Margaret Davis",
+    "action": "Routine SMR Complete",
+    "actor": "Dr. Sarah Chen, MD",
+    "details": "Accepted taper for Zolpidem 5mg -> 2.5mg. Fall risk mitigated from 44.2% to 28.5%.",
+    "status": "Signed"
+  }
+]

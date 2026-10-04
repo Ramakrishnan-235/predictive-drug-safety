@@ -1,0 +1,1447 @@
+[
+  {
+    "hadm_id": 88421,
+    "mrn": "#MRN-88421",
+    "name": "Eleanor Vance",
+    "initials": "EV",
+    "age": 84,
+    "gender": "FEMALE",
+    "bed": "Bed 402-A",
+    "ward": "Acute Care Unit 4B",
+    "los_days": 1,
+    "code_status": "Full Code",
+    "acuity_tier": "Critical",
+    "risk_percentage": 68.4,
+    "trend": "up",
+    "drug_count": 16,
+    "prn_count": 3,
+    "creatinine": 1.8,
+    "renal_egfr": 28,
+    "renal_stage": "CKD 4 (Cr 1.8)",
+    "blood_pressure": "114/68",
+    "bp_drop": -22,
+    "primary_pim": {
+      "label": "Z-Drug (Zolpidem 10mg)",
+      "severity": "critical"
+    },
+    "secondary_pim": "Diuretic (Furosemide 40mg)",
+    "high_risk_meds": [
+      "Zolpidem 10mg",
+      "Furosemide 40mg"
+    ],
+    "primary_recommendation": "Taper Zolpidem; initiate sleep hygiene protocol",
+    "recommendation_tags": "BEERS 2023 \u00b7 HIGH SEDATION RISK",
+    "review_badge": "Unreviewed",
+    "review_time": "Admitted 2h ago",
+    "reviewer_info": "Admitted 2h ago"
+  },
+  {
+    "hadm_id": 77319,
+    "mrn": "#MRN-77319",
+    "name": "Arthur Pendelton",
+    "initials": "AP",
+    "age": 79,
+    "gender": "MALE",
+    "bed": "Bed 404-B",
+    "ward": "Acute Care Unit 4B",
+    "los_days": 2,
+    "code_status": "Full Code",
+    "acuity_tier": "Critical",
+    "risk_percentage": 58.2,
+    "trend": "up",
+    "drug_count": 14,
+    "prn_count": 2,
+    "creatinine": 1.5,
+    "renal_egfr": 34,
+    "renal_stage": "CKD 3b (Cr 1.5)",
+    "blood_pressure": "118/70",
+    "bp_drop": -18,
+    "primary_pim": {
+      "label": "BZD (Lorazepam 1mg)",
+      "severity": "critical"
+    },
+    "secondary_pim": "Diuretic (Furosemide PM)",
+    "high_risk_meds": [
+      "Lorazepam 1mg",
+      "Furosemide PM"
+    ],
+    "primary_recommendation": "Deprescribe Furosemide PM; orthostatic BP eval",
+    "recommendation_tags": "NOCTURIA HAZARD \u00b7 STOPP SEC B",
+    "review_time": "Reviewed 45m ago",
+    "review_actor": "By Dr. Chen",
+    "reviewer_info": "Reviewed 45m ago By Dr. Chen"
+  },
+  {
+    "hadm_id": 64210,
+    "mrn": "#MRN-64210",
+    "name": "Clara Higgins",
+    "initials": "CH",
+    "age": 88,
+    "gender": "FEMALE",
+    "bed": "Bed 407-A",
+    "ward": "Acute Care Unit 4B",
+    "los_days": 3,
+    "code_status": "Full Code",
+    "acuity_tier": "High",
+    "risk_percentage": 44.7,
+    "trend": "up",
+    "drug_count": 12,
+    "prn_count": 1,
+    "creatinine": 1.1,
+    "renal_egfr": 58,
+    "renal_stage": "CKD 3a (Cr 1.1)",
+    "blood_pressure": "126/74",
+    "bp_drop": -15,
+    "primary_pim": {
+      "label": "Anticholinergic (ACB 3)",
+      "severity": "high"
+    },
+    "secondary_pim": "Antihistamine (Diphenhydramine)",
+    "high_risk_meds": [
+      "Anticholinergic (ACB 3)",
+      "Antihistamine (Diphenhydramine)"
+    ],
+    "primary_recommendation": "Anticholinergic reduction (ACB 4 \u2192 1)",
+    "recommendation_tags": "DELIRIUM PROTOCOL ACTIVE",
+    "review_time": "Reviewed 2h ago",
+    "review_actor": "By PharmD Vance",
+    "reviewer_info": "Reviewed 2h ago By PharmD Vance"
+  },
+  {
+    "hadm_id": 55902,
+    "mrn": "#MRN-55902",
+    "name": "Walter Kowalski",
+    "initials": "WK",
+    "age": 81,
+    "gender": "MALE",
+    "bed": "Bed 410-C",
+    "ward": "Acute Care Unit 4B",
+    "los_days": 4,
+    "code_status": "DNR/DNI",
+    "acuity_tier": "High",
+    "risk_percentage": 42.1,
+    "trend": "up",
+    "drug_count": 15,
+    "prn_count": 4,
+    "creatinine": 2.1,
+    "renal_egfr": 24,
+    "renal_stage": "CKD 4 (Cr 2.1)",
+    "blood_pressure": "110/65",
+    "bp_drop": -20,
+    "primary_pim": {
+      "label": "Opioid (Oxycodone 5mg)",
+      "severity": "critical"
+    },
+    "secondary_pim": "Gabapentin 300mg",
+    "high_risk_meds": [
+      "Opioid (Oxycodone 5mg)",
+      "Gabapentin 300mg"
+    ],
+    "primary_recommendation": "Renal dose adjust Gabapentin to 100mg QHS",
+    "recommendation_tags": "ACCUMULATION ATAXIA HAZARD",
+    "review_time": "Reviewed 3h ago",
+    "review_actor": "By Dr. Chen",
+    "reviewer_info": "Reviewed 3h ago By Dr. Chen"
+  },
+  {
+    "hadm_id": 90214,
+    "mrn": "#MRN-90214",
+    "name": "Margaret DuPont",
+    "initials": "MD",
+    "age": 76,
+    "gender": "FEMALE",
+    "bed": "Bed 412-B",
+    "ward": "Acute Care Unit 4B",
+    "los_days": 3,
+    "code_status": "Full Code",
+    "acuity_tier": "Moderate",
+    "risk_percentage": 21.5,
+    "trend": "neutral",
+    "drug_count": 9,
+    "prn_count": 1,
+    "creatinine": 0.9,
+    "renal_egfr": 72,
+    "renal_stage": "CKD 2 (Cr 0.9)",
+    "blood_pressure": "134/78",
+    "bp_drop": -14,
+    "primary_pim": {
+      "label": "Antihypertensive (Amlodipine)",
+      "severity": "neutral"
+    },
+    "high_risk_meds": [
+      "Antihypertensive (Amlodipine)"
+    ],
+    "primary_recommendation": "Monitor seated/standing blood pressure delta",
+    "recommendation_tags": "POSTURAL STABILITY FLAG ON PT",
+    "review_time": "Reviewed 5h ago",
+    "review_actor": "By RN Sarah",
+    "reviewer_info": "Reviewed 5h ago By RN Sarah"
+  },
+  {
+    "hadm_id": 43187,
+    "mrn": "#MRN-43187",
+    "name": "Harold Jenkins",
+    "initials": "HJ",
+    "age": 73,
+    "gender": "MALE",
+    "bed": "Bed 415-A",
+    "ward": "Acute Care Unit 4B",
+    "los_days": 5,
+    "code_status": "Full Code",
+    "acuity_tier": "Low",
+    "risk_percentage": 14.3,
+    "trend": "down",
+    "drug_count": 6,
+    "prn_count": 0,
+    "creatinine": 0.8,
+    "renal_egfr": 88,
+    "renal_stage": "CKD 1/2 (Cr 0.8)",
+    "blood_pressure": "122/74",
+    "bp_drop": -4,
+    "primary_pim": {
+      "label": "Statin (Atorvastatin 20mg)",
+      "severity": "neutral"
+    },
+    "secondary_pim": "Beta-blocker (Bisoprolol 2.5)",
+    "high_risk_meds": [
+      "Statin (Atorvastatin 20mg)",
+      "Beta-blocker (Bisoprolol 2.5)"
+    ],
+    "primary_recommendation": "Optimal regimen maintained; discharge review",
+    "recommendation_tags": "NO CDSS ALERTS ACTIVE",
+    "review_time": "Reviewed 6h ago",
+    "review_actor": "Discharge ready",
+    "reviewer_info": "Reviewed 6h ago Discharge ready"
+  },
+  {
+    "hadm_id": 994211,
+    "mrn": "#MRN-80101",
+    "name": "Clara Oswald",
+    "age": 79,
+    "gender": "FEMALE",
+    "bed": "Bed 402-A",
+    "ward": "Geriatric Ward 4B",
+    "los_days": 3,
+    "code_status": "Full Code",
+    "acuity_tier": "High",
+    "risk_percentage": 48.5,
+    "trend": "up",
+    "drug_count": 11,
+    "prn_count": 2,
+    "creatinine": 1.45,
+    "renal_egfr": 41,
+    "renal_stage": "CKD 3b",
+    "blood_pressure": "126/81",
+    "bp_drop": -16,
+    "high_risk_meds": [
+      "Zolpidem 5mg",
+      "Furosemide 20mg"
+    ],
+    "clinical_notes": [
+      "Z-Drug fall risk flagged",
+      "Taper to sleep hygiene protocol"
+    ],
+    "reviewer_info": "Reviewed 4h ago By Staff RN"
+  },
+  {
+    "hadm_id": 994212,
+    "mrn": "#MRN-80102",
+    "name": "George Washington Gale",
+    "age": 85,
+    "gender": "MALE",
+    "bed": "Bed 402-B",
+    "ward": "Geriatric Ward 4B",
+    "los_days": 4,
+    "code_status": "Full Code",
+    "acuity_tier": "High",
+    "risk_percentage": 54.2,
+    "trend": "up",
+    "drug_count": 13,
+    "prn_count": 1,
+    "creatinine": 1.6,
+    "renal_egfr": 36,
+    "renal_stage": "CKD 3b",
+    "blood_pressure": "127/82",
+    "bp_drop": -17,
+    "high_risk_meds": [
+      "Haloperidol 0.5mg",
+      "Clonazepam"
+    ],
+    "clinical_notes": [
+      "Antipsychotic + Benzodiazepine synergism",
+      "High extrapyramidal ataxia risk"
+    ],
+    "reviewer_info": "Reviewed 5h ago By Staff RN"
+  },
+  {
+    "hadm_id": 994213,
+    "mrn": "#MRN-80103",
+    "name": "Beatrice Montgomery",
+    "age": 82,
+    "gender": "FEMALE",
+    "bed": "Bed 403-A",
+    "ward": "Geriatric Ward 4B",
+    "los_days": 5,
+    "code_status": "Full Code",
+    "acuity_tier": "High",
+    "risk_percentage": 42.1,
+    "trend": "up",
+    "drug_count": 10,
+    "prn_count": 0,
+    "creatinine": 1.3,
+    "renal_egfr": 48,
+    "renal_stage": "CKD 3a",
+    "blood_pressure": "128/83",
+    "bp_drop": -14,
+    "high_risk_meds": [
+      "Oxycodone 5mg",
+      "Pregabalin"
+    ],
+    "clinical_notes": [
+      "Opioid + Gabapentinoid sedation alert",
+      "Bedside fall alarm activated"
+    ],
+    "reviewer_info": "Reviewed 6h ago By Staff RN"
+  },
+  {
+    "hadm_id": 994214,
+    "mrn": "#MRN-80104",
+    "name": "Donald Fletcher",
+    "age": 77,
+    "gender": "MALE",
+    "bed": "Bed 403-B",
+    "ward": "Geriatric Ward 4B",
+    "los_days": 6,
+    "code_status": "Full Code",
+    "acuity_tier": "High",
+    "risk_percentage": 46.8,
+    "trend": "up",
+    "drug_count": 12,
+    "prn_count": 2,
+    "creatinine": 1.55,
+    "renal_egfr": 38,
+    "renal_stage": "CKD 3b",
+    "blood_pressure": "129/84",
+    "bp_drop": -15,
+    "high_risk_meds": [
+      "Hydrochlorothiazide",
+      "Temazepam"
+    ],
+    "clinical_notes": [
+      "Diuretic volume depletion + BZD",
+      "Standing systolic drop -19 mmHg"
+    ],
+    "reviewer_info": "Reviewed 7h ago By Staff RN"
+  },
+  {
+    "hadm_id": 994215,
+    "mrn": "#MRN-80105",
+    "name": "Florence Nightingale Davis",
+    "age": 88,
+    "gender": "FEMALE",
+    "bed": "Bed 404-A",
+    "ward": "Geriatric Ward 4B",
+    "los_days": 2,
+    "code_status": "Full Code",
+    "acuity_tier": "High",
+    "risk_percentage": 59.4,
+    "trend": "up",
+    "drug_count": 14,
+    "prn_count": 3,
+    "creatinine": 1.7,
+    "renal_egfr": 32,
+    "renal_stage": "CKD 3b",
+    "blood_pressure": "130/70",
+    "bp_drop": -18,
+    "high_risk_meds": [
+      "Alprazolam 0.5mg",
+      "Furosemide"
+    ],
+    "clinical_notes": [
+      "Severe Beers PIM violation",
+      "Pharmacist consult requested for taper"
+    ],
+    "reviewer_info": "Reviewed 8h ago By Staff RN"
+  },
+  {
+    "hadm_id": 994216,
+    "mrn": "#MRN-80106",
+    "name": "Samuel Brooks",
+    "age": 83,
+    "gender": "MALE",
+    "bed": "Bed 404-B",
+    "ward": "Geriatric Ward 4B",
+    "los_days": 3,
+    "code_status": "Full Code",
+    "acuity_tier": "High",
+    "risk_percentage": 51.0,
+    "trend": "up",
+    "drug_count": 11,
+    "prn_count": 1,
+    "creatinine": 1.4,
+    "renal_egfr": 43,
+    "renal_stage": "CKD 3b",
+    "blood_pressure": "131/71",
+    "bp_drop": -16,
+    "high_risk_meds": [
+      "Tamsulosin 0.4mg",
+      "Lisinopril"
+    ],
+    "clinical_notes": [
+      "Alpha-1 blocker first-dose syncope risk",
+      "Monitor night-time bathroom transfers"
+    ],
+    "reviewer_info": "Reviewed 1h ago By Staff RN"
+  },
+  {
+    "hadm_id": 994217,
+    "mrn": "#MRN-80107",
+    "name": "Dorothy Higgins",
+    "age": 80,
+    "gender": "FEMALE",
+    "bed": "Bed 406-A",
+    "ward": "Geriatric Ward 4B",
+    "los_days": 4,
+    "code_status": "Full Code",
+    "acuity_tier": "High",
+    "risk_percentage": 45.2,
+    "trend": "up",
+    "drug_count": 9,
+    "prn_count": 2,
+    "creatinine": 1.35,
+    "renal_egfr": 45,
+    "renal_stage": "CKD 3a",
+    "blood_pressure": "132/72",
+    "bp_drop": -15,
+    "high_risk_meds": [
+      "Sertraline 50mg",
+      "Zolpidem"
+    ],
+    "clinical_notes": [
+      "Hyponatremia hazard + sedative hip fracture risk",
+      "Check serum sodium levels"
+    ],
+    "reviewer_info": "Reviewed 2h ago By Staff RN"
+  },
+  {
+    "hadm_id": 994218,
+    "mrn": "#MRN-80108",
+    "name": "Leonard McCoy",
+    "age": 75,
+    "gender": "MALE",
+    "bed": "Bed 406-B",
+    "ward": "Geriatric Ward 4B",
+    "los_days": 5,
+    "code_status": "Full Code",
+    "acuity_tier": "High",
+    "risk_percentage": 43.6,
+    "trend": "up",
+    "drug_count": 10,
+    "prn_count": 1,
+    "creatinine": 1.25,
+    "renal_egfr": 52,
+    "renal_stage": "CKD 3a",
+    "blood_pressure": "133/73",
+    "bp_drop": -14,
+    "high_risk_meds": [
+      "Amiodarone",
+      "Metoprolol"
+    ],
+    "clinical_notes": [
+      "Bradycardia + conduction delay risk",
+      "Telemetry continuous monitoring active"
+    ],
+    "reviewer_info": "Reviewed 3h ago By Staff RN"
+  },
+  {
+    "hadm_id": 994219,
+    "mrn": "#MRN-80109",
+    "name": "Alice Henderson",
+    "age": 84,
+    "gender": "FEMALE",
+    "bed": "Bed 407-A",
+    "ward": "Geriatric Ward 4B",
+    "los_days": 6,
+    "code_status": "Full Code",
+    "acuity_tier": "Moderate",
+    "risk_percentage": 38.2,
+    "trend": "neutral",
+    "drug_count": 8,
+    "prn_count": 1,
+    "creatinine": 1.1,
+    "renal_egfr": 56,
+    "renal_stage": "CKD 3a",
+    "blood_pressure": "134/74",
+    "bp_drop": -13,
+    "high_risk_meds": [
+      "Citalopram 20mg"
+    ],
+    "clinical_notes": [
+      "QTc prolongation screening recommended",
+      "Physical therapy gait assessment scheduled"
+    ],
+    "reviewer_info": "Reviewed 4h ago By Staff RN"
+  },
+  {
+    "hadm_id": 994220,
+    "mrn": "#MRN-80110",
+    "name": "Frank Castle",
+    "age": 78,
+    "gender": "MALE",
+    "bed": "Bed 407-B",
+    "ward": "Geriatric Ward 4B",
+    "los_days": 2,
+    "code_status": "Full Code",
+    "acuity_tier": "Moderate",
+    "risk_percentage": 35.4,
+    "trend": "neutral",
+    "drug_count": 9,
+    "prn_count": 0,
+    "creatinine": 1.05,
+    "renal_egfr": 60,
+    "renal_stage": "CKD 2",
+    "blood_pressure": "115/75",
+    "bp_drop": -12,
+    "high_risk_meds": [
+      "Carvedilol 12.5mg"
+    ],
+    "clinical_notes": [
+      "Mild orthostatic sensation on chair stand",
+      "Blood pressure log recorded TID"
+    ],
+    "reviewer_info": "Reviewed 5h ago By Staff RN"
+  },
+  {
+    "hadm_id": 994221,
+    "mrn": "#MRN-80111",
+    "name": "Grace Kelly",
+    "age": 81,
+    "gender": "FEMALE",
+    "bed": "Bed 409-A",
+    "ward": "Geriatric Ward 4B",
+    "los_days": 3,
+    "code_status": "Full Code",
+    "acuity_tier": "Moderate",
+    "risk_percentage": 39.8,
+    "trend": "neutral",
+    "drug_count": 10,
+    "prn_count": 2,
+    "creatinine": 1.2,
+    "renal_egfr": 50,
+    "renal_stage": "CKD 3a",
+    "blood_pressure": "116/76",
+    "bp_drop": -13,
+    "high_risk_meds": [
+      "Gabapentin 300mg"
+    ],
+    "clinical_notes": [
+      "Dose adjusted for CrCl 48 mL/min",
+      "No active contraindications"
+    ],
+    "reviewer_info": "Reviewed 6h ago By Staff RN"
+  },
+  {
+    "hadm_id": 994222,
+    "mrn": "#MRN-80112",
+    "name": "Henry Higgins",
+    "age": 80,
+    "gender": "MALE",
+    "bed": "Bed 409-B",
+    "ward": "Geriatric Ward 4B",
+    "los_days": 4,
+    "code_status": "Full Code",
+    "acuity_tier": "Moderate",
+    "risk_percentage": 32.5,
+    "trend": "neutral",
+    "drug_count": 8,
+    "prn_count": 1,
+    "creatinine": 1.0,
+    "renal_egfr": 64,
+    "renal_stage": "CKD 2",
+    "blood_pressure": "117/77",
+    "bp_drop": -12,
+    "high_risk_meds": [
+      "Losartan 50mg"
+    ],
+    "clinical_notes": [
+      "Preserved balance score",
+      "Scheduled for routine discharge planning"
+    ],
+    "reviewer_info": "Reviewed 7h ago By Staff RN"
+  },
+  {
+    "hadm_id": 994223,
+    "mrn": "#MRN-80113",
+    "name": "Irene Adler",
+    "age": 74,
+    "gender": "FEMALE",
+    "bed": "Bed 411-A",
+    "ward": "Geriatric Ward 4B",
+    "los_days": 5,
+    "code_status": "Full Code",
+    "acuity_tier": "Moderate",
+    "risk_percentage": 28.6,
+    "trend": "neutral",
+    "drug_count": 7,
+    "prn_count": 0,
+    "creatinine": 0.9,
+    "renal_egfr": 71,
+    "renal_stage": "CKD 2",
+    "blood_pressure": "118/78",
+    "bp_drop": -11,
+    "high_risk_meds": [
+      "Levothyroxine",
+      "Atorvastatin"
+    ],
+    "clinical_notes": [
+      "Stable chronic pharmacotherapy",
+      "Routine vitals within parameters"
+    ],
+    "reviewer_info": "Reviewed 8h ago By Staff RN"
+  },
+  {
+    "hadm_id": 994224,
+    "mrn": "#MRN-80114",
+    "name": "James Wilson",
+    "age": 82,
+    "gender": "MALE",
+    "bed": "Bed 411-B",
+    "ward": "Geriatric Ward 4B",
+    "los_days": 6,
+    "code_status": "Full Code",
+    "acuity_tier": "Moderate",
+    "risk_percentage": 36.1,
+    "trend": "neutral",
+    "drug_count": 9,
+    "prn_count": 1,
+    "creatinine": 1.15,
+    "renal_egfr": 54,
+    "renal_stage": "CKD 3a",
+    "blood_pressure": "119/79",
+    "bp_drop": -13,
+    "high_risk_meds": [
+      "Spironolactone 25mg"
+    ],
+    "clinical_notes": [
+      "Monitor potassium levels",
+      "Mild nocturia reported"
+    ],
+    "reviewer_info": "Reviewed 1h ago By Staff RN"
+  },
+  {
+    "hadm_id": 994225,
+    "mrn": "#MRN-80115",
+    "name": "Katherine Johnson",
+    "age": 89,
+    "gender": "FEMALE",
+    "bed": "Bed 413-A",
+    "ward": "Geriatric Ward 4B",
+    "los_days": 2,
+    "code_status": "Full Code",
+    "acuity_tier": "Moderate",
+    "risk_percentage": 37.9,
+    "trend": "neutral",
+    "drug_count": 10,
+    "prn_count": 2,
+    "creatinine": 1.2,
+    "renal_egfr": 49,
+    "renal_stage": "CKD 3a",
+    "blood_pressure": "120/80",
+    "bp_drop": -13,
+    "high_risk_meds": [
+      "Donepezil 5mg",
+      "Memantine"
+    ],
+    "clinical_notes": [
+      "Cognitive baseline stable",
+      "Fall mat placed at bedside"
+    ],
+    "reviewer_info": "Reviewed 2h ago By Staff RN"
+  },
+  {
+    "hadm_id": 994226,
+    "mrn": "#MRN-80116",
+    "name": "Lawrence Talbot",
+    "age": 79,
+    "gender": "MALE",
+    "bed": "Bed 413-B",
+    "ward": "Geriatric Ward 4B",
+    "los_days": 3,
+    "code_status": "Full Code",
+    "acuity_tier": "Moderate",
+    "risk_percentage": 31.4,
+    "trend": "neutral",
+    "drug_count": 8,
+    "prn_count": 0,
+    "creatinine": 0.95,
+    "renal_egfr": 66,
+    "renal_stage": "CKD 2",
+    "blood_pressure": "121/81",
+    "bp_drop": -11,
+    "high_risk_meds": [
+      "Metformin 500mg"
+    ],
+    "clinical_notes": [
+      "Renal function safe for biguanide",
+      "Physical therapy assisted walks"
+    ],
+    "reviewer_info": "Reviewed 3h ago By Staff RN"
+  },
+  {
+    "hadm_id": 994227,
+    "mrn": "#MRN-80117",
+    "name": "Martha Stewart",
+    "age": 85,
+    "gender": "FEMALE",
+    "bed": "Bed 414-A",
+    "ward": "Geriatric Ward 4B",
+    "los_days": 4,
+    "code_status": "Full Code",
+    "acuity_tier": "Moderate",
+    "risk_percentage": 34.7,
+    "trend": "neutral",
+    "drug_count": 9,
+    "prn_count": 1,
+    "creatinine": 1.05,
+    "renal_egfr": 58,
+    "renal_stage": "CKD 3a",
+    "blood_pressure": "122/82",
+    "bp_drop": -12,
+    "high_risk_meds": [
+      "Omeprazole 20mg",
+      "Calcium"
+    ],
+    "clinical_notes": [
+      "Consider PPI deprescribing review",
+      "Low acute fall probability"
+    ],
+    "reviewer_info": "Reviewed 4h ago By Staff RN"
+  },
+  {
+    "hadm_id": 994228,
+    "mrn": "#MRN-80118",
+    "name": "Norman Bates",
+    "age": 76,
+    "gender": "MALE",
+    "bed": "Bed 414-B",
+    "ward": "Geriatric Ward 4B",
+    "los_days": 5,
+    "code_status": "Full Code",
+    "acuity_tier": "Moderate",
+    "risk_percentage": 29.8,
+    "trend": "neutral",
+    "drug_count": 7,
+    "prn_count": 1,
+    "creatinine": 0.92,
+    "renal_egfr": 69,
+    "renal_stage": "CKD 2",
+    "blood_pressure": "123/83",
+    "bp_drop": -11,
+    "high_risk_meds": [
+      "Diltiazem 120mg"
+    ],
+    "clinical_notes": [
+      "Heart rate controlled",
+      "No postural drops detected"
+    ],
+    "reviewer_info": "Reviewed 5h ago By Staff RN"
+  },
+  {
+    "hadm_id": 994229,
+    "mrn": "#MRN-80119",
+    "name": "Ophelia Palmer",
+    "age": 83,
+    "gender": "FEMALE",
+    "bed": "Bed 416-A",
+    "ward": "Geriatric Ward 4B",
+    "los_days": 6,
+    "code_status": "Full Code",
+    "acuity_tier": "Moderate",
+    "risk_percentage": 33.2,
+    "trend": "neutral",
+    "drug_count": 8,
+    "prn_count": 0,
+    "creatinine": 1.1,
+    "renal_egfr": 55,
+    "renal_stage": "CKD 3a",
+    "blood_pressure": "124/84",
+    "bp_drop": -12,
+    "high_risk_meds": [
+      "Apixaban 2.5mg BID"
+    ],
+    "clinical_notes": [
+      "Renal dosing verified",
+      "Fall precautions maintained"
+    ],
+    "reviewer_info": "Reviewed 6h ago By Staff RN"
+  },
+  {
+    "hadm_id": 994230,
+    "mrn": "#MRN-80120",
+    "name": "Patrick Stewart",
+    "age": 81,
+    "gender": "MALE",
+    "bed": "Bed 416-B",
+    "ward": "Geriatric Ward 4B",
+    "los_days": 2,
+    "code_status": "Full Code",
+    "acuity_tier": "Moderate",
+    "risk_percentage": 27.5,
+    "trend": "neutral",
+    "drug_count": 7,
+    "prn_count": 1,
+    "creatinine": 0.88,
+    "renal_egfr": 73,
+    "renal_stage": "CKD 2",
+    "blood_pressure": "125/70",
+    "bp_drop": -10,
+    "high_risk_meds": [
+      "Aspirin 81mg",
+      "Clopidogrel"
+    ],
+    "clinical_notes": [
+      "Dual antiplatelet therapy reviewed",
+      "Discharge planned 48h"
+    ],
+    "reviewer_info": "Reviewed 7h ago By Staff RN"
+  },
+  {
+    "hadm_id": 994231,
+    "mrn": "#MRN-80121",
+    "name": "Queenie Goldstein",
+    "age": 77,
+    "gender": "FEMALE",
+    "bed": "Bed 417-A",
+    "ward": "Geriatric Ward 4B",
+    "los_days": 3,
+    "code_status": "Full Code",
+    "acuity_tier": "Moderate",
+    "risk_percentage": 25.4,
+    "trend": "neutral",
+    "drug_count": 6,
+    "prn_count": 0,
+    "creatinine": 0.85,
+    "renal_egfr": 78,
+    "renal_stage": "CKD 2",
+    "blood_pressure": "126/71",
+    "bp_drop": -10,
+    "high_risk_meds": [
+      "Pantoprazole 40mg"
+    ],
+    "clinical_notes": [
+      "Regimen optimized",
+      "No Beers criteria alerts"
+    ],
+    "reviewer_info": "Reviewed 8h ago By Staff RN"
+  },
+  {
+    "hadm_id": 994232,
+    "mrn": "#MRN-80122",
+    "name": "Richard Starkey",
+    "age": 82,
+    "gender": "MALE",
+    "bed": "Bed 417-B",
+    "ward": "Geriatric Ward 4B",
+    "los_days": 4,
+    "code_status": "Full Code",
+    "acuity_tier": "Moderate",
+    "risk_percentage": 24.1,
+    "trend": "neutral",
+    "drug_count": 7,
+    "prn_count": 1,
+    "creatinine": 0.9,
+    "renal_egfr": 72,
+    "renal_stage": "CKD 2",
+    "blood_pressure": "127/72",
+    "bp_drop": -10,
+    "high_risk_meds": [
+      "Warfarin 3mg"
+    ],
+    "clinical_notes": [
+      "INR stable at 2.3",
+      "Assisted ambulation only"
+    ],
+    "reviewer_info": "Reviewed 1h ago By Staff RN"
+  },
+  {
+    "hadm_id": 994233,
+    "mrn": "#MRN-80123",
+    "name": "Susan Bones",
+    "age": 78,
+    "gender": "FEMALE",
+    "bed": "Bed 418-A",
+    "ward": "Geriatric Ward 4B",
+    "los_days": 5,
+    "code_status": "Full Code",
+    "acuity_tier": "Moderate",
+    "risk_percentage": 26.9,
+    "trend": "neutral",
+    "drug_count": 8,
+    "prn_count": 1,
+    "creatinine": 0.98,
+    "renal_egfr": 65,
+    "renal_stage": "CKD 2",
+    "blood_pressure": "128/73",
+    "bp_drop": -10,
+    "high_risk_meds": [
+      "Insulin Glargine 14u"
+    ],
+    "clinical_notes": [
+      "No hypoglycemia reported",
+      "Bed rail sensors armed"
+    ],
+    "reviewer_info": "Reviewed 2h ago By Staff RN"
+  },
+  {
+    "hadm_id": 994234,
+    "mrn": "#MRN-80124",
+    "name": "Thomas Shelby",
+    "age": 84,
+    "gender": "MALE",
+    "bed": "Bed 418-B",
+    "ward": "Geriatric Ward 4B",
+    "los_days": 6,
+    "code_status": "Full Code",
+    "acuity_tier": "Moderate",
+    "risk_percentage": 39.1,
+    "trend": "neutral",
+    "drug_count": 10,
+    "prn_count": 2,
+    "creatinine": 1.25,
+    "renal_egfr": 51,
+    "renal_stage": "CKD 3a",
+    "blood_pressure": "129/74",
+    "bp_drop": -13,
+    "high_risk_meds": [
+      "Baclofen 10mg"
+    ],
+    "clinical_notes": [
+      "Muscle relaxant sedation risk flagged",
+      "Scheduled for taper evaluation"
+    ],
+    "reviewer_info": "Reviewed 3h ago By Staff RN"
+  },
+  {
+    "hadm_id": 994235,
+    "mrn": "#MRN-80125",
+    "name": "Ursula Buffay",
+    "age": 86,
+    "gender": "FEMALE",
+    "bed": "Bed 419-A",
+    "ward": "Geriatric Ward 4B",
+    "los_days": 2,
+    "code_status": "Full Code",
+    "acuity_tier": "Moderate",
+    "risk_percentage": 30.5,
+    "trend": "neutral",
+    "drug_count": 8,
+    "prn_count": 0,
+    "creatinine": 1.05,
+    "renal_egfr": 59,
+    "renal_stage": "CKD 3a",
+    "blood_pressure": "130/75",
+    "bp_drop": -11,
+    "high_risk_meds": [
+      "Hydrocodone/APAP"
+    ],
+    "clinical_notes": [
+      "PRN analgesic use minimal",
+      "Physical therapy cleared for walker"
+    ],
+    "reviewer_info": "Reviewed 4h ago By Staff RN"
+  },
+  {
+    "hadm_id": 994236,
+    "mrn": "#MRN-80126",
+    "name": "Victor Frankenstein",
+    "age": 80,
+    "gender": "MALE",
+    "bed": "Bed 419-B",
+    "ward": "Geriatric Ward 4B",
+    "los_days": 3,
+    "code_status": "Full Code",
+    "acuity_tier": "Moderate",
+    "risk_percentage": 22.0,
+    "trend": "neutral",
+    "drug_count": 6,
+    "prn_count": 1,
+    "creatinine": 0.82,
+    "renal_egfr": 81,
+    "renal_stage": "CKD 2",
+    "blood_pressure": "131/76",
+    "bp_drop": -9,
+    "high_risk_meds": [
+      "Allopurinol 100mg"
+    ],
+    "clinical_notes": [
+      "Uric acid target achieved",
+      "Preserved mobility"
+    ],
+    "reviewer_info": "Reviewed 5h ago By Staff RN"
+  },
+  {
+    "hadm_id": 994237,
+    "mrn": "#MRN-80127",
+    "name": "Wendy Darling",
+    "age": 75,
+    "gender": "FEMALE",
+    "bed": "Bed 420-A",
+    "ward": "Geriatric Ward 4B",
+    "los_days": 4,
+    "code_status": "Full Code",
+    "acuity_tier": "Moderate",
+    "risk_percentage": 23.4,
+    "trend": "neutral",
+    "drug_count": 7,
+    "prn_count": 0,
+    "creatinine": 0.86,
+    "renal_egfr": 76,
+    "renal_stage": "CKD 2",
+    "blood_pressure": "132/77",
+    "bp_drop": -9,
+    "high_risk_meds": [
+      "Lisinopril 10mg"
+    ],
+    "clinical_notes": [
+      "Stable hemodynamics",
+      "Discharge review queued"
+    ],
+    "reviewer_info": "Reviewed 6h ago By Staff RN"
+  },
+  {
+    "hadm_id": 994238,
+    "mrn": "#MRN-80128",
+    "name": "Xavier Rhodes",
+    "age": 87,
+    "gender": "MALE",
+    "bed": "Bed 420-B",
+    "ward": "Geriatric Ward 4B",
+    "los_days": 5,
+    "code_status": "Full Code",
+    "acuity_tier": "Low",
+    "risk_percentage": 18.9,
+    "trend": "down",
+    "drug_count": 5,
+    "prn_count": 0,
+    "creatinine": 0.78,
+    "renal_egfr": 86,
+    "renal_stage": "CKD 1/2",
+    "blood_pressure": "133/78",
+    "bp_drop": -8,
+    "high_risk_meds": [
+      "Atorvastatin 10mg"
+    ],
+    "clinical_notes": [
+      "Preserved functional independence",
+      "No fall history"
+    ],
+    "reviewer_info": "Reviewed 7h ago By Staff RN"
+  },
+  {
+    "hadm_id": 994239,
+    "mrn": "#MRN-80129",
+    "name": "Yvonne Strahovski",
+    "age": 73,
+    "gender": "FEMALE",
+    "bed": "Bed 421-A",
+    "ward": "Geriatric Ward 4B",
+    "los_days": 6,
+    "code_status": "Full Code",
+    "acuity_tier": "Low",
+    "risk_percentage": 16.4,
+    "trend": "down",
+    "drug_count": 5,
+    "prn_count": 0,
+    "creatinine": 0.72,
+    "renal_egfr": 92,
+    "renal_stage": "CKD 1/2",
+    "blood_pressure": "134/79",
+    "bp_drop": -8,
+    "high_risk_meds": [
+      "Levothyroxine 50mcg"
+    ],
+    "clinical_notes": [
+      "Optimal medication adherence",
+      "Discharge in 24h"
+    ],
+    "reviewer_info": "Reviewed 8h ago By Staff RN"
+  },
+  {
+    "hadm_id": 994240,
+    "mrn": "#MRN-80130",
+    "name": "Zachary Levi",
+    "age": 74,
+    "gender": "MALE",
+    "bed": "Bed 421-B",
+    "ward": "Geriatric Ward 4B",
+    "los_days": 2,
+    "code_status": "Full Code",
+    "acuity_tier": "Low",
+    "risk_percentage": 15.2,
+    "trend": "down",
+    "drug_count": 6,
+    "prn_count": 1,
+    "creatinine": 0.8,
+    "renal_egfr": 85,
+    "renal_stage": "CKD 1/2",
+    "blood_pressure": "115/80",
+    "bp_drop": -7,
+    "high_risk_meds": [
+      "Metoprolol 25mg"
+    ],
+    "clinical_notes": [
+      "Vital signs stable",
+      "No orthostasis"
+    ],
+    "reviewer_info": "Reviewed 1h ago By Staff RN"
+  },
+  {
+    "hadm_id": 994241,
+    "mrn": "#MRN-80131",
+    "name": "Audrey Hepburn",
+    "age": 79,
+    "gender": "FEMALE",
+    "bed": "Bed 422-A",
+    "ward": "Geriatric Ward 4B",
+    "los_days": 3,
+    "code_status": "Full Code",
+    "acuity_tier": "Low",
+    "risk_percentage": 12.8,
+    "trend": "down",
+    "drug_count": 4,
+    "prn_count": 0,
+    "creatinine": 0.7,
+    "renal_egfr": 95,
+    "renal_stage": "CKD 1/2",
+    "blood_pressure": "116/81",
+    "bp_drop": -7,
+    "high_risk_meds": [
+      "Cholecalciferol 1000IU"
+    ],
+    "clinical_notes": [
+      "Normal gait analysis",
+      "Discharge ready"
+    ],
+    "reviewer_info": "Reviewed 2h ago By Staff RN"
+  },
+  {
+    "hadm_id": 994242,
+    "mrn": "#MRN-80132",
+    "name": "Buster Keaton",
+    "age": 81,
+    "gender": "MALE",
+    "bed": "Bed 422-B",
+    "ward": "Geriatric Ward 4B",
+    "los_days": 4,
+    "code_status": "Full Code",
+    "acuity_tier": "Low",
+    "risk_percentage": 17.5,
+    "trend": "down",
+    "drug_count": 5,
+    "prn_count": 0,
+    "creatinine": 0.84,
+    "renal_egfr": 82,
+    "renal_stage": "CKD 1/2",
+    "blood_pressure": "117/82",
+    "bp_drop": -8,
+    "high_risk_meds": [
+      "Finasteride 5mg"
+    ],
+    "clinical_notes": [
+      "Minimal drug burden",
+      "Independent transfers"
+    ],
+    "reviewer_info": "Reviewed 3h ago By Staff RN"
+  },
+  {
+    "hadm_id": 994243,
+    "mrn": "#MRN-80133",
+    "name": "Catherine Deneuve",
+    "age": 76,
+    "gender": "FEMALE",
+    "bed": "Bed 423-A",
+    "ward": "Geriatric Ward 4B",
+    "los_days": 5,
+    "code_status": "Full Code",
+    "acuity_tier": "Low",
+    "risk_percentage": 11.2,
+    "trend": "down",
+    "drug_count": 4,
+    "prn_count": 0,
+    "creatinine": 0.68,
+    "renal_egfr": 98,
+    "renal_stage": "CKD 1/2",
+    "blood_pressure": "118/83",
+    "bp_drop": -6,
+    "high_risk_meds": [
+      "Multivitamin",
+      "Aspirin 81mg"
+    ],
+    "clinical_notes": [
+      "Preserved mobility metrics",
+      "Low acuity"
+    ],
+    "reviewer_info": "Reviewed 4h ago By Staff RN"
+  },
+  {
+    "hadm_id": 994244,
+    "mrn": "#MRN-80134",
+    "name": "David Niven",
+    "age": 83,
+    "gender": "MALE",
+    "bed": "Bed 423-B",
+    "ward": "Geriatric Ward 4B",
+    "los_days": 6,
+    "code_status": "Full Code",
+    "acuity_tier": "Low",
+    "risk_percentage": 19.4,
+    "trend": "down",
+    "drug_count": 6,
+    "prn_count": 1,
+    "creatinine": 0.89,
+    "renal_egfr": 75,
+    "renal_stage": "CKD 2",
+    "blood_pressure": "119/84",
+    "bp_drop": -8,
+    "high_risk_meds": [
+      "Amlodipine 2.5mg"
+    ],
+    "clinical_notes": [
+      "Blood pressure controlled",
+      "No gait deviations"
+    ],
+    "reviewer_info": "Reviewed 5h ago By Staff RN"
+  },
+  {
+    "hadm_id": 994245,
+    "mrn": "#MRN-80135",
+    "name": "Eva Green",
+    "age": 72,
+    "gender": "FEMALE",
+    "bed": "Bed 424-A",
+    "ward": "Geriatric Ward 4B",
+    "los_days": 2,
+    "code_status": "Full Code",
+    "acuity_tier": "Low",
+    "risk_percentage": 9.8,
+    "trend": "down",
+    "drug_count": 4,
+    "prn_count": 0,
+    "creatinine": 0.65,
+    "renal_egfr": 102,
+    "renal_stage": "CKD 1/2",
+    "blood_pressure": "120/70",
+    "bp_drop": -6,
+    "high_risk_meds": [
+      "Calcium + Vit D"
+    ],
+    "clinical_notes": [
+      "Excellent functional reserve",
+      "Discharge ready"
+    ],
+    "reviewer_info": "Reviewed 6h ago By Staff RN"
+  },
+  {
+    "hadm_id": 994246,
+    "mrn": "#MRN-80136",
+    "name": "Frank Sinatra",
+    "age": 85,
+    "gender": "MALE",
+    "bed": "Bed 424-B",
+    "ward": "Geriatric Ward 4B",
+    "los_days": 3,
+    "code_status": "Full Code",
+    "acuity_tier": "Low",
+    "risk_percentage": 18.0,
+    "trend": "down",
+    "drug_count": 5,
+    "prn_count": 0,
+    "creatinine": 0.82,
+    "renal_egfr": 80,
+    "renal_stage": "CKD 1/2",
+    "blood_pressure": "121/71",
+    "bp_drop": -8,
+    "high_risk_meds": [
+      "Atorvastatin 20mg"
+    ],
+    "clinical_notes": [
+      "Normal cognitive and balance screen",
+      "Discharge scheduled"
+    ],
+    "reviewer_info": "Reviewed 7h ago By Staff RN"
+  },
+  {
+    "hadm_id": 994247,
+    "mrn": "#MRN-80137",
+    "name": "Greta Garbo",
+    "age": 80,
+    "gender": "FEMALE",
+    "bed": "Bed 425-A",
+    "ward": "Geriatric Ward 4B",
+    "los_days": 4,
+    "code_status": "Full Code",
+    "acuity_tier": "Low",
+    "risk_percentage": 14.9,
+    "trend": "down",
+    "drug_count": 5,
+    "prn_count": 0,
+    "creatinine": 0.75,
+    "renal_egfr": 88,
+    "renal_stage": "CKD 1/2",
+    "blood_pressure": "122/72",
+    "bp_drop": -7,
+    "high_risk_meds": [
+      "Omeprazole 20mg"
+    ],
+    "clinical_notes": [
+      "Stable inpatient course",
+      "Low fall probability"
+    ],
+    "reviewer_info": "Reviewed 8h ago By Staff RN"
+  },
+  {
+    "hadm_id": 994248,
+    "mrn": "#MRN-80138",
+    "name": "Humphrey Bogart",
+    "age": 78,
+    "gender": "MALE",
+    "bed": "Bed 425-B",
+    "ward": "Geriatric Ward 4B",
+    "los_days": 5,
+    "code_status": "Full Code",
+    "acuity_tier": "Low",
+    "risk_percentage": 16.8,
+    "trend": "down",
+    "drug_count": 6,
+    "prn_count": 1,
+    "creatinine": 0.85,
+    "renal_egfr": 81,
+    "renal_stage": "CKD 1/2",
+    "blood_pressure": "123/73",
+    "bp_drop": -8,
+    "high_risk_meds": [
+      "Lisinopril 5mg"
+    ],
+    "clinical_notes": [
+      "Normal postural response",
+      "Physical therapy signed off"
+    ],
+    "reviewer_info": "Reviewed 1h ago By Staff RN"
+  },
+  {
+    "hadm_id": 994249,
+    "mrn": "#MRN-80139",
+    "name": "Ingrid Bergman",
+    "age": 77,
+    "gender": "FEMALE",
+    "bed": "Bed 426-A",
+    "ward": "Geriatric Ward 4B",
+    "los_days": 6,
+    "code_status": "Full Code",
+    "acuity_tier": "Low",
+    "risk_percentage": 13.5,
+    "trend": "down",
+    "drug_count": 4,
+    "prn_count": 0,
+    "creatinine": 0.7,
+    "renal_egfr": 94,
+    "renal_stage": "CKD 1/2",
+    "blood_pressure": "124/74",
+    "bp_drop": -7,
+    "high_risk_meds": [
+      "Metformin 500mg"
+    ],
+    "clinical_notes": [
+      "Euglycemic control maintained",
+      "Discharge pending transportation"
+    ],
+    "reviewer_info": "Reviewed 2h ago By Staff RN"
+  },
+  {
+    "hadm_id": 994250,
+    "mrn": "#MRN-80140",
+    "name": "James Dean",
+    "age": 71,
+    "gender": "MALE",
+    "bed": "Bed 426-B",
+    "ward": "Geriatric Ward 4B",
+    "los_days": 2,
+    "code_status": "Full Code",
+    "acuity_tier": "Low",
+    "risk_percentage": 8.4,
+    "trend": "down",
+    "drug_count": 3,
+    "prn_count": 0,
+    "creatinine": 0.62,
+    "renal_egfr": 105,
+    "renal_stage": "CKD 1/2",
+    "blood_pressure": "125/75",
+    "bp_drop": -6,
+    "high_risk_meds": [
+      "Acetaminophen PRN"
+    ],
+    "clinical_notes": [
+      "Zero high-risk medications",
+      "Discharge ready"
+    ],
+    "reviewer_info": "Reviewed 3h ago By Staff RN"
+  },
+  {
+    "hadm_id": 994251,
+    "mrn": "#MRN-80141",
+    "name": "Judy Garland",
+    "age": 75,
+    "gender": "FEMALE",
+    "bed": "Bed 427-A",
+    "ward": "Geriatric Ward 4B",
+    "los_days": 3,
+    "code_status": "Full Code",
+    "acuity_tier": "Low",
+    "risk_percentage": 10.6,
+    "trend": "down",
+    "drug_count": 4,
+    "prn_count": 0,
+    "creatinine": 0.69,
+    "renal_egfr": 96,
+    "renal_stage": "CKD 1/2",
+    "blood_pressure": "126/76",
+    "bp_drop": -6,
+    "high_risk_meds": [
+      "Cholecalciferol 2000IU"
+    ],
+    "clinical_notes": [
+      "Preserved righting reflex",
+      "Discharge ready"
+    ],
+    "reviewer_info": "Reviewed 4h ago By Staff RN"
+  },
+  {
+    "hadm_id": 994252,
+    "mrn": "#MRN-80142",
+    "name": "Kirk Douglas",
+    "age": 91,
+    "gender": "MALE",
+    "bed": "Bed 427-B",
+    "ward": "Geriatric Ward 4B",
+    "los_days": 4,
+    "code_status": "Full Code",
+    "acuity_tier": "Low",
+    "risk_percentage": 19.8,
+    "trend": "down",
+    "drug_count": 6,
+    "prn_count": 0,
+    "creatinine": 0.9,
+    "renal_egfr": 72,
+    "renal_stage": "CKD 2",
+    "blood_pressure": "127/77",
+    "bp_drop": -8,
+    "high_risk_meds": [
+      "Tamsulosin 0.4mg"
+    ],
+    "clinical_notes": [
+      "Stable gait with walker",
+      "Rounds complete"
+    ],
+    "reviewer_info": "Reviewed 5h ago By Staff RN"
+  }
+]
