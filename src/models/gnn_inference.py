@@ -3,6 +3,7 @@ from pathlib import Path
 from typing import List, Dict, Tuple, Any, Optional
 import json
 import itertools
+import re
 import numpy as np
 import torch
 from torch_geometric.data import Data, Batch
@@ -14,7 +15,7 @@ if str(PROJECT_ROOT) not in sys.path:
 
 from src.models.gnn_fall_model import RegimenGNNPredictor
 from src.models.ddi_graph import DDISeverityEngine
-from src.clinical_rules.safety_rules import audit_patient_medications, FRID_CATEGORIES, RENAL_RISK_MEDS
+from src.clinical_rules.safety_rules import audit_patient_medications
 
 # Tabular clinical predictors matching graph_dataset.py
 CLINICAL_TABULAR_COLS = [
@@ -45,10 +46,14 @@ class GNNInferenceEngine:
     def __init__(
         self,
         checkpoint_path: str = "models/gnn_fall_model.pt",
-        device: Optional[str] = None
+        device: Optional[str] = None,
+        vocabulary_path: str = "data/processed/gnn_drug_vocab.json",
     ):
         self.device = torch.device(device if device else ("cuda" if torch.cuda.is_available() else "cpu"))
-        self.checkpoint_path = Path(checkpoint_path)
+        self.checkpoint_path = self._artifact_path(checkpoint_path)
+        self.vocabulary_path = self._artifact_path(vocabulary_path)
+        if not self.checkpoint_path.is_file():
+            raise FileNotFoundError(f"GNN checkpoint not found: {self.checkpoint_path}")
         
         self.drug_to_idx, self.idx_to_drug = self._load_vocabulary()
         self.num_unique_drugs = len(self.drug_to_idx)
@@ -65,38 +70,30 @@ class GNNInferenceEngine:
             dense_hidden_dim=64
         ).to(self.device)
         
-        if self.checkpoint_path.exists():
-            state_dict = torch.load(self.checkpoint_path, map_location=self.device, weights_only=True)
-            self.model.load_state_dict(state_dict)
-            self.model.eval()
-        else:
-            print(f"[Warning] Checkpoint {self.checkpoint_path} not found. Running in uninitialized mode.")
-            self.model.eval()
+        state_dict = torch.load(self.checkpoint_path, map_location=self.device, weights_only=True)
+        self.model.load_state_dict(state_dict)
+        self.model.eval()
+
+    @staticmethod
+    def _artifact_path(path: str) -> Path:
+        artifact_path = Path(path)
+        return artifact_path if artifact_path.is_absolute() else PROJECT_ROOT / artifact_path
 
     def _load_vocabulary(self) -> Tuple[Dict[str, int], Dict[int, str]]:
-        """Loads or constructs the 5034-drug vocabulary mapping."""
-        vocab_cache = Path("data/processed/gnn_drug_vocab.json")
-        if vocab_cache.exists():
-            with open(vocab_cache, "r", encoding="utf-8") as f:
-                drug_to_idx = json.load(f)
-            idx_to_drug = {int(v): k for k, v in drug_to_idx.items()}
-            return drug_to_idx, idx_to_drug
-            
-        parquet_path = Path("data/processed/geriatric_features_with_ddi.parquet")
-        if parquet_path.exists():
-            import polars as pl
-            df = pl.read_parquet(parquet_path)
-            all_drugs = sorted(list({d.lower().strip() for sublist in df["drug_name_list"].to_list() for d in sublist}))
-            drug_to_idx = {drug: i for i, drug in enumerate(all_drugs)}
-            vocab_cache.parent.mkdir(parents=True, exist_ok=True)
-            with open(vocab_cache, "w", encoding="utf-8") as f:
-                json.dump(drug_to_idx, f)
-            idx_to_drug = {i: drug for drug, i in drug_to_idx.items()}
-            return drug_to_idx, idx_to_drug
-            
-        # Fallback dummy vocab if parquet not available
-        default_vocab = {f"drug_{i}": i for i in range(5034)}
-        return default_vocab, {v: k for k, v in default_vocab.items()}
+        """Loads the vocabulary belonging to the trained checkpoint."""
+        if not self.vocabulary_path.is_file():
+            raise FileNotFoundError(f"GNN drug vocabulary not found: {self.vocabulary_path}")
+        with self.vocabulary_path.open("r", encoding="utf-8") as f:
+            drug_to_idx = json.load(f)
+        if (
+            not isinstance(drug_to_idx, dict)
+            or not drug_to_idx
+            or any(not isinstance(drug, str) or not drug.strip() for drug in drug_to_idx)
+            or any(type(index) is not int for index in drug_to_idx.values())
+            or set(drug_to_idx.values()) != set(range(len(drug_to_idx)))
+        ):
+            raise ValueError("GNN drug vocabulary must contain unique contiguous integer indices starting at zero")
+        return drug_to_idx, {index: drug for drug, index in drug_to_idx.items()}
 
     def match_drug_to_vocab(self, query: str) -> Optional[str]:
         """Matches a user input query to a known drug in the vocabulary."""
@@ -106,17 +103,28 @@ class GNNInferenceEngine:
         if q in self.drug_to_idx:
             return q
             
-        # Substring prefix matching
+        # Match complete drug-name tokens, never arbitrary prefixes such as "zol".
+        drug_name = re.compile(rf"(?<!\w){re.escape(q)}(?!\w)")
         for d in self.drug_to_idx:
-            if q == d or d.startswith(q) or f" {q} " in f" {d} " or f"({q})" in d:
+            if drug_name.search(d):
                 return d
-                
-        # Word token matching
-        for d in self.drug_to_idx:
-            if any(token == q for token in d.replace("*", " ").replace("(", " ").replace(")", " ").split()):
-                return d
-                
         return None
+
+    def _normalize_regimen(self, drug_list: List[str]) -> List[str]:
+        """Canonicalize medication names once and retain each medication once."""
+        medications = []
+        seen = set()
+        for raw_med in drug_list:
+            if not isinstance(raw_med, str):
+                raise ValueError("Medication names must be strings")
+            cleaned = raw_med.strip().lower()
+            if not cleaned:
+                continue
+            medication = self.match_drug_to_vocab(cleaned) or cleaned
+            if medication not in seen:
+                seen.add(medication)
+                medications.append(medication)
+        return medications
 
     def build_graph(
         self,
@@ -128,23 +136,10 @@ class GNNInferenceEngine:
     ) -> Tuple[Data, List[str], Dict[str, Any]]:
         """Constructs a PyTorch Geometric Data graph matching the model expectations."""
         # 1. Standardize and match drug names
-        matched_meds = []
-        matched_indices = []
-        for raw_med in drug_list:
-            cleaned = raw_med.strip().lower()
-            if not cleaned:
-                continue
-            matched = self.match_drug_to_vocab(cleaned)
-            if matched:
-                matched_meds.append(matched)
-                matched_indices.append(self.drug_to_idx[matched])
-            else:
-                # If unknown, map to node index 0
-                matched_meds.append(cleaned)
-                matched_indices.append(0)
-
-        if len(matched_indices) == 0:
-            matched_meds = ["unknown"]
+        matched_meds = self._normalize_regimen(drug_list)
+        matched_indices = [self.drug_to_idx.get(medication, 0) for medication in matched_meds]
+        # The graph needs a node for pooling, but it is not an active medication.
+        if not matched_indices:
             matched_indices = [0]
 
         num_nodes = len(matched_indices)
@@ -162,7 +157,7 @@ class GNNInferenceEngine:
         edge_weights = []
         edge_mechanisms = {}
 
-        for i, j in itertools.combinations(range(num_nodes), 2):
+        for i, j in itertools.combinations(range(len(matched_meds)), 2):
             kws_i = med_keywords[i]
             kws_j = med_keywords[j]
             if not kws_i or not kws_j:
@@ -392,12 +387,17 @@ class GNNInferenceEngine:
         creatinine_avg: float = 1.2
     ) -> Dict[str, Any]:
         """Calculates risk delta after deprescribing a targeted drug."""
-        baseline_res = self.predict(drug_list, age, creatinine_min, creatinine_max, creatinine_avg)
-        
+        medications = self._normalize_regimen(drug_list)
+        if not isinstance(drug_to_remove, str):
+            raise ValueError("drug_to_remove must identify an active medication")
         target = drug_to_remove.lower().strip()
-        reduced_list = [d for d in drug_list if target not in d.lower()]
-        if not reduced_list:
-            reduced_list = ["unknown"]
+        if not target:
+            raise ValueError("drug_to_remove must identify an active medication")
+        target = self.match_drug_to_vocab(target) or target
+        if target not in medications:
+            raise ValueError("drug_to_remove must identify an active medication")
+        reduced_list = [medication for medication in medications if medication != target]
+        baseline_res = self.predict(medications, age, creatinine_min, creatinine_max, creatinine_avg)
 
         deprescribed_res = self.predict(reduced_list, age, creatinine_min, creatinine_max, creatinine_avg)
         
@@ -409,6 +409,7 @@ class GNNInferenceEngine:
             "deprescribed_risk_pct": deprescribed_res["predicted_risk_pct"],
             "delta_pct": delta_pct,
             "removed_drug": drug_to_remove,
+            "target_drug_removed": drug_to_remove,
             "deprescribed_regimen": reduced_list,
             "baseline_tier": baseline_res["risk_tier"],
             "deprescribed_tier": deprescribed_res["risk_tier"]
@@ -484,4 +485,3 @@ class GNNInferenceEngine:
         seen = set(curated_priority)
         rest = [d for d in all_vocab if d not in seen and not d.startswith("*nf") and len(d) > 2]
         return curated_priority + sorted(rest[:500])
-

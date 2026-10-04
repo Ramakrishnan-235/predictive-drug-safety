@@ -6,13 +6,14 @@ import { TelemetryEvent } from "@/types/patient";
 export function useTelemetrySSE() {
   const [telemetry, setTelemetry] = useState<TelemetryEvent | null>(null);
   const [isConnected, setIsConnected] = useState(false);
-  const [syncTimeAgo, setSyncTimeAgo] = useState("2m ago");
+  const [syncTimeAgo, setSyncTimeAgo] = useState("not synchronized");
   const [latestAlert, setLatestAlert] = useState<string | null>(null);
-  const lastSyncRef = useRef<number>(Date.now() - 120000);
+  const lastSyncRef = useRef<number | null>(null);
 
   useEffect(() => {
     // Update relative time display
     const interval = setInterval(() => {
+      if (lastSyncRef.current === null) return;
       const diffSec = Math.floor((Date.now() - lastSyncRef.current) / 1000);
       if (diffSec < 60) {
         setSyncTimeAgo(`${diffSec}s ago`);
@@ -32,17 +33,19 @@ export function useTelemetrySSE() {
       eventSource = new EventSource("/api/telemetry/stream");
 
       eventSource.onopen = () => {
-        setIsConnected(true);
+        // A connection alone does not establish that its data came from the API.
       };
 
       eventSource.onmessage = (event) => {
         try {
           const data: TelemetryEvent = JSON.parse(event.data);
           setTelemetry(data);
-          setIsConnected(true);
-          lastSyncRef.current = Date.now();
-          setSyncTimeAgo("just now");
-          if (data.alert) {
+          setIsConnected(data.source !== "demo");
+          if (data.source !== "demo") {
+            lastSyncRef.current = Date.now();
+            setSyncTimeAgo("just now");
+          }
+          if (data.alert && data.source !== "demo") {
             setLatestAlert(data.alert);
           }
         } catch {
@@ -54,7 +57,7 @@ export function useTelemetrySSE() {
         setIsConnected(false);
       };
     } catch {
-      setIsConnected(false);
+      // The initial connection state already represents an unavailable stream.
     }
 
     return () => {

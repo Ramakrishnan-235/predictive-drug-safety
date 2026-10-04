@@ -149,7 +149,8 @@ Output valid JSON with:
             elif "lipitor" in clean or "atorvastatin" in clean:
                 standardized_drugs.append("atorvastatin")
             else:
-                standardized_drugs.append(clean.split()[0])
+                standardized_drugs.append(clean)
+        standardized_drugs = list(dict.fromkeys(standardized_drugs))
 
         # FRID audit
         safety = audit_patient_medications(standardized_drugs, cr)
@@ -173,33 +174,54 @@ Output valid JSON with:
             "total_frid_classes": len(triggered_frids),
             "cns_polypharmacy_flag": bool(safety.get("cns_polypharmacy_flag", 0)),
             "renal_contraindication_flag": bool(safety.get("renal_contraindication_flag", 0)),
-            "structured_by": "MedGemma 1.5 (Local Engine)",
+            "structured_by": "Deterministic Clinical Rules",
         }
 
     def _finalize_structure(self, raw: Dict[str, Any], parsed: Dict[str, Any]) -> Dict[str, Any]:
-        """Merges LLM JSON output with calibrated validation."""
+        """Validate generated medication names and apply deterministic safety flags."""
         cr = float(raw.get("creatinine", 1.2))
-        drugs = parsed.get("standardized_drugs", [])
+        drugs = parsed.get("standardized_drugs")
+        if not isinstance(drugs, list) or any(not isinstance(drug, str) or not drug.strip() for drug in drugs):
+            raise ValueError("standardized_drugs must be an array of non-empty medication names")
+        if not drugs and str(raw.get("drugs_text", "")).strip():
+            raise ValueError("Generated medication list omitted the supplied medication orders")
+        drugs = list(dict.fromkeys(drug.strip().lower() for drug in drugs))
         safety = audit_patient_medications(drugs, cr)
+        structured = self._expert_rule_structuring(raw)
+        triggered_frids = [category for category in FRID_CATEGORIES if safety[category]]
         return {
-            "name": raw.get("name", "Robert Miller"),
-            "mrn": raw.get("mrn", "#884210"),
-            "age": float(raw.get("age", 75)),
-            "gender": str(raw.get("gender", "MALE")).upper(),
-            "bed": raw.get("bed", "Bed 402-A"),
-            "creatinine": cr,
-            "creatinine_min": float(raw.get("creatinine_min", cr - 0.3)),
-            "creatinine_max": float(raw.get("creatinine_max", cr)),
-            "creatinine_avg": float(raw.get("creatinine_avg", cr - 0.15)),
-            "calculated_egfr": parsed.get("egfr", 31),
-            "ckd_stage": parsed.get("ckd_stage", "CKD Stage 3b"),
+            **structured,
             "standardized_drugs": drugs,
-            "raw_medication_count": len(drugs),
-            "triggered_frid_classes": parsed.get("frid_classes", []),
-            "total_frid_classes": len(parsed.get("frid_classes", [])),
+            "triggered_frid_classes": triggered_frids,
+            "total_frid_classes": len(triggered_frids),
             "cns_polypharmacy_flag": bool(safety.get("cns_polypharmacy_flag", 0)),
             "renal_contraindication_flag": bool(safety.get("renal_contraindication_flag", 0)),
             "structured_by": "MedGemma 1.5 (Ollama Service)",
+        }
+
+    @staticmethod
+    def _verification_from_response(response: Dict[str, Any], model: str) -> Dict[str, Any]:
+        """Preserve the model's review result without inventing confidence or drugs."""
+        rationale = response.get("clinical_rationale")
+        cascade = response.get("primary_culprit_cascade", [])
+        guidance = response.get("deprescribing_guidance", "")
+        if not isinstance(rationale, str) or not rationale.strip():
+            raise ValueError("Clinical review must include a rationale")
+        if not isinstance(cascade, list) or any(not isinstance(item, str) for item in cascade):
+            raise ValueError("Clinical review cascade must be an array of strings")
+        if isinstance(guidance, list) and all(isinstance(item, str) for item in guidance):
+            guidance = "\n".join(guidance)
+        if not isinstance(guidance, str):
+            raise ValueError("Clinical review guidance must be text or an array of strings")
+        verified = response.get("is_verified") is True
+        return {
+            "is_verified": verified,
+            "verifier_model": model,
+            "verification_status": "AI REVIEW COMPLETED" if verified else "REQUIRES CLINICAL REVIEW",
+            "confidence": "Not calibrated",
+            "clinical_rationale": rationale,
+            "primary_culprit_cascade": cascade,
+            "deprescribing_guidance": guidance,
         }
 
     def verify_and_explain(
@@ -252,21 +274,7 @@ Provide JSON response with:
                 if s_idx != -1 and e_idx != -1:
                     out = json.loads(cleaned[s_idx : e_idx + 1])
                     if "clinical_rationale" in out:
-                        return {
-                            "is_verified": bool(out.get("is_verified", True)),
-                            "verifier_model": "Google MedGemma 1.5-4B (LangChain Native)",
-                            "verification_status": "CLINICALLY VERIFIED",
-                            "confidence": "97.2%",
-                            "clinical_rationale": out.get("clinical_rationale"),
-                            "primary_culprit_cascade": out.get(
-                                "primary_culprit_cascade",
-                                ["Lorazepam 1.0mg QHS", "Furosemide 40mg QAM", "Diphenhydramine 25mg PRN"],
-                            ),
-                            "deprescribing_guidance": out.get(
-                                "deprescribing_guidance",
-                                "Taper Lorazepam by 50%; Discontinue PRN Diphenhydramine; Adjust Furosemide to AM.",
-                            ),
-                        }
+                        return self._verification_from_response(out, "Google MedGemma 1.5-4B (LangChain Native)")
             except Exception:
                 pass
 
@@ -301,21 +309,7 @@ Provide JSON response with:
                 if resp.status_code == 200:
                     out = json.loads(resp.json().get("response", "{}"))
                     if "clinical_rationale" in out:
-                        return {
-                            "is_verified": bool(out.get("is_verified", True)),
-                            "verifier_model": "MedGemma 1.5 (Ollama Service)",
-                            "verification_status": "CLINICALLY VERIFIED",
-                            "confidence": "96.4%",
-                            "clinical_rationale": out.get("clinical_rationale"),
-                            "primary_culprit_cascade": out.get(
-                                "primary_culprit_cascade",
-                                ["Lorazepam 1.0mg QHS", "Furosemide 40mg QAM", "Diphenhydramine 25mg PRN"],
-                            ),
-                            "deprescribing_guidance": out.get(
-                                "deprescribing_guidance",
-                                "Taper Lorazepam by 50%; Discontinue PRN Diphenhydramine; Adjust Furosemide to AM.",
-                            ),
-                        }
+                        return self._verification_from_response(out, "MedGemma 1.5 (Ollama Service)")
             except Exception as e:
                 print(f"[MedGemma Pipeline] Verification fallback: {e}")
 
@@ -416,17 +410,17 @@ Provide JSON response with:
         formatted_cascade = [f"{idx + 1}. {item}" if not item.startswith(f"{idx + 1}.") else item for idx, item in enumerate(cascade_items)]
 
         rationale = (
-            f"MedGemma 1.5 confirms the GNN {risk_pct}% ({acuity}) risk prediction. "
+            f"Rule-based medication review for the reported {risk_pct}% ({acuity}) risk score. "
             + (" ".join(mechanisms) if mechanisms else "The cumulative pharmacodynamic load and patient vulnerability elevate 48-hour fall risk.")
             + " The synergistic convergence of hemodynamic and neuro-motor pathways creates an acute "
             + "fall trajectory requiring immediate structured deprescribing."
         )
 
         return {
-            "is_verified": True,
-            "verifier_model": "MedGemma 1.5 (Clinical Pharmacology Engine)",
-            "verification_status": "CLINICALLY VERIFIED",
-            "confidence": "96.4%",
+            "is_verified": False,
+            "verifier_model": "Deterministic Clinical Rules",
+            "verification_status": "RULE REVIEW COMPLETED; CLINICIAN REVIEW REQUIRED",
+            "confidence": "Not calibrated",
             "clinical_rationale": rationale,
             "primary_culprit_cascade": formatted_cascade,
             "deprescribing_guidance": "\n".join(guidance_items),

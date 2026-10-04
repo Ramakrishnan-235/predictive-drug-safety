@@ -17,7 +17,7 @@ from langchain_core.messages import SystemMessage, HumanMessage
 from langchain_core.output_parsers import PydanticOutputParser
 from langchain_core.runnables import RunnableLambda
 
-from src.explainability.clinical_explainer import ClinicalRecommendation
+from src.explainability.recommendation import ClinicalRecommendation, recommendation_from_response
 from src.explainability.knowledge_retriever import ClinicalKnowledgeRetriever
 from src.explainability.medgemma_chat_model import MedGemmaChatModel
 
@@ -61,6 +61,8 @@ class LangChainClinicalExplainer:
 
     def _load_config(self, path_str: str) -> Dict[str, Any]:
         p = Path(path_str)
+        if not p.is_absolute():
+            p = PROJECT_ROOT / p
         if p.exists():
             try:
                 with open(p, "r", encoding="utf-8") as f:
@@ -130,8 +132,8 @@ class LangChainClinicalExplainer:
             "risk_stratification": risk_stratification,
             "patient_age": labs.get("age_at_admission", 78),
             "creatinine_max": labs.get("max_creatinine", 1.2),
-            "calculated_egfr": labs.get("calculated_egfr", 35),
-            "active_medications": active_medications[:15],
+            "calculated_egfr": labs.get("calculated_egfr"),
+            "active_medications": active_medications,
             "unique_drug_count": len(active_medications),
             "primary_risk_drivers": driver_strings,
             "top_gnn_attention_interactions": top_interaction_pairs or [],
@@ -166,7 +168,7 @@ class LangChainClinicalExplainer:
                 raw_text = response.content if hasattr(response, "content") else str(response)
                 parsed = self._clean_and_parse_json(raw_text)
                 if parsed:
-                    return ClinicalRecommendation(**parsed)
+                    return recommendation_from_response(parsed, case_data)
             except Exception as e:
                 logger.warning(
                     f"[LangChainExplainer] MedGemma 1.5 4B execution did not complete ({e}). "
@@ -235,7 +237,7 @@ class LangChainClinicalExplainer:
                 )
                 if resp.status_code == 200:
                     data = json.loads(resp.json()["message"]["content"])
-                    return ClinicalRecommendation(**data)
+                    return recommendation_from_response(data, payload)
         except Exception:
             pass
         return None
@@ -283,9 +285,10 @@ class LangChainClinicalExplainer:
             action_plan.append("Consolidate diuretic dosing to morning (08:00 AM) and verify standing orthostatic blood pressure.")
 
         # 4. Renal clearance deficit
-        if cr_max > 1.4 or payload.get("calculated_egfr", 100) < 45:
+        egfr = payload.get("calculated_egfr")
+        if cr_max > 1.4 or (egfr is not None and egfr < 45):
             mechanisms.append(
-                f"Impaired renal excretion (Cr {cr_max:.2f} mg/dL, eGFR {payload.get('calculated_egfr', 35)} mL/min) "
+                f"Impaired renal excretion (Cr {cr_max:.2f} mg/dL, eGFR {egfr if egfr is not None else 'not supplied'} mL/min) "
                 "prolongs the biological half-life of active drugs and neurotoxic metabolites."
             )
             action_plan.append("Adjust dosing for all renally cleared drugs according to Cockcroft-Gault CrCl.")

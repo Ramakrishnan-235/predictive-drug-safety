@@ -7,26 +7,15 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 import torch
-from pydantic import BaseModel, Field
 from typing import List, Dict, Any, Optional
-import json
-
-from src.explainability.attribution import PatientRiskAttributor, FEATURE_NAMES
-from src.explainability.knowledge_retriever import ClinicalKnowledgeRetriever
-
-
-class ClinicalRecommendation(BaseModel):
-    hadm_id: int
-    predicted_fall_risk: float = Field(description="Calibrated probability of fall/syncope [0.0 - 1.0]")
-    risk_stratification: str = Field(description="Low, Moderate, or High")
-    primary_risk_drivers: List[str] = Field(description="Top features driving the neural prediction")
-    pharmacological_mechanisms: str = Field(description="Biochemical and physiological interaction pathway")
-    clinical_guideline_citations: List[str] = Field(description="Referenced Beers / STOPP v3 criteria")
-    actionable_deprescribing_plan: List[str] = Field(description="Concrete clinical steps for medication adjustment")
+from src.explainability.recommendation import ClinicalRecommendation
 
 
 class MechanisticExplainerEngine:
     def __init__(self, checkpoint_path: str = "models/fall_risk_model.pt"):
+        from src.explainability.attribution import PatientRiskAttributor
+        from src.explainability.knowledge_retriever import ClinicalKnowledgeRetriever
+
         self.attributor = PatientRiskAttributor(checkpoint_path=checkpoint_path)
         self.retriever = ClinicalKnowledgeRetriever()
         
@@ -104,6 +93,8 @@ class MechanisticExplainerEngine:
 
 
 if __name__ == "__main__":
+    from src.explainability.attribution import FEATURE_NAMES
+
     engine = MechanisticExplainerEngine()
     dummy_features = torch.randn(len(FEATURE_NAMES))
     recommendation = engine.generate_clinical_explanation(

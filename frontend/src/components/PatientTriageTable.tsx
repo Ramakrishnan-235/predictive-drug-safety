@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useState, useRef } from "react";
+import React, { useMemo, useState } from "react";
 import {
   ColumnDef,
   flexRender,
@@ -39,7 +39,7 @@ export function PatientTriageTable({
       critical: patients.filter((p) => p.acuity_tier === "Critical").length,
       high: patients.filter((p) => p.acuity_tier === "High").length,
       pim: patients.filter((p) => Boolean(p.primary_pim)).length,
-      renal: patients.filter((p) => p.renal_egfr < 30).length,
+      renal: patients.filter((p) => p.renal_egfr != null && p.renal_egfr < 30).length,
     };
   }, [patients]);
 
@@ -53,7 +53,7 @@ export function PatientTriageTable({
     } else if (filter === "pim") {
       list = list.filter((p) => Boolean(p.primary_pim));
     } else if (filter === "renal") {
-      list = list.filter((p) => p.renal_egfr < 30);
+      list = list.filter((p) => p.renal_egfr != null && p.renal_egfr < 30);
     }
 
     // Sort list
@@ -66,7 +66,7 @@ export function PatientTriageTable({
     } else if (sortField === "bed") {
       list.sort((a, b) => a.bed.localeCompare(b.bed));
     } else if (sortField === "egfr") {
-      list.sort((a, b) => a.renal_egfr - b.renal_egfr);
+      list.sort((a, b) => (a.renal_egfr ?? Infinity) - (b.renal_egfr ?? Infinity));
     } else if (sortField === "drugs") {
       list.sort((a, b) => b.drug_count - a.drug_count);
     }
@@ -96,7 +96,8 @@ export function PatientTriageTable({
   };
 
   // Helper for eGFR color
-  const getEgfrColor = (egfr: number) => {
+  const getEgfrColor = (egfr: number | null) => {
+    if (egfr == null) return "text-slate-500";
     if (egfr < 30) return "text-[#dc2626] font-semibold";
     if (egfr < 45) return "text-[#b45309] font-semibold";
     if (egfr < 60) return "text-slate-800 font-medium";
@@ -145,7 +146,7 @@ export function PatientTriageTable({
                 {pat.drug_count} meds ({pat.prn_count} PRN)
               </span>
               <span className={`mt-0.5 text-xs ${getEgfrColor(pat.renal_egfr)}`}>
-                eGFR: {pat.renal_egfr} mL/min ({pat.renal_stage})
+                eGFR: {pat.renal_egfr == null ? "Unavailable" : `${pat.renal_egfr} mL/min`} ({pat.renal_stage ?? "Stage unavailable"})
               </span>
             </div>
           );
@@ -312,18 +313,19 @@ export function PatientTriageTable({
   );
 
   // TanStack Table Instance
+  const effectivePageIndex = Math.min(pageIndex, Math.max(0, Math.ceil(filteredData.length / pageSize) - 1));
   const table = useReactTable({
     data: filteredData,
     columns,
     state: {
       pagination: {
-        pageIndex,
+        pageIndex: effectivePageIndex,
         pageSize,
       },
     },
     onPaginationChange: (updater) => {
       if (typeof updater === "function") {
-        const next = updater({ pageIndex, pageSize });
+        const next = updater({ pageIndex: effectivePageIndex, pageSize });
         setPageIndex(next.pageIndex);
         setPageSize(next.pageSize);
       }
@@ -506,7 +508,7 @@ export function PatientTriageTable({
 
       {/* PAGINATION FOOTER */}
       <TablePagination
-        currentPage={pageIndex + 1}
+        currentPage={effectivePageIndex + 1}
         totalPages={table.getPageCount() || 1}
         pageSize={pageSize}
         totalRows={filteredData.length}
@@ -519,4 +521,3 @@ export function PatientTriageTable({
     </div>
   );
 }
-

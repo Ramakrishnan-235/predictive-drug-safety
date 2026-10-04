@@ -7,7 +7,6 @@ import {
   User,
   Sparkles,
   Shield,
-  Plus,
 } from "lucide-react";
 
 interface NavigationHeaderProps {
@@ -125,4 +124,3 @@ export function NavigationHeader({
     </header>
   );
 }
-

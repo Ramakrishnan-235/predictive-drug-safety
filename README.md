@@ -49,9 +49,29 @@ Ensure you have the following installed on your system:
 
 ## Quick Start: How to Run the Project
 
+### One-Click Windows Launchers (Easiest)
+| Action | Launcher Script | Description |
+|---|---|---|
+| **Full Stack** | `run_all.bat` | Launches FastAPI (:8000) & Next.js (:3000) in separate terminals |
+| **Backend API** | `run_backend.bat` | Starts FastAPI uvicorn server with auto-reload |
+| **Frontend UI** | `run_frontend.bat` | Starts Next.js clinical ward dashboard |
+| **Streamlit Explorer** | `run_streamlit.bat` | Starts interactive standalone GNN explorer (:8501) |
+| **Test Suite** | `run_tests.bat` | Executes GNN inference verification and unit tests |
+| **Setup & Sync** | `setup.bat` | Bootstraps `.venv`, installs Python and npm packages |
+
+---
+
 ### 1. Environment Setup
 
-Clone the repository and configure your Python environment:
+Configure your Python environment:
+
+#### Using `Makefile` (Linux / macOS / WSL):
+```bash
+make setup      # Installs both Python and Frontend dependencies
+make backend    # Runs FastAPI server
+make frontend   # Runs Next.js UI
+make test       # Runs all test suites
+```
 
 #### Using `uv` (Fastest, Recommended):
 ```bash

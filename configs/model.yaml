@@ -1,0 +1,39 @@
+# ==============================================================================
+# GeriSafe CDSS - Model & Inference Configuration
+# ==============================================================================
+
+# Graph Neural Network (PyTorch Geometric GATv2)
+gnn_model:
+  architecture: "GATv2"
+  checkpoint_path: "models/gnn_fall_model.pt"
+  in_channels: 64
+  hidden_channels: 128
+  out_channels: 1
+  heads: 4
+  dropout: 0.2
+  device: "auto"  # 'auto', 'cuda', or 'cpu'
+
+# Baseline tabular / PyHealth model
+baseline_model:
+  architecture: "RETAIN"
+  checkpoint_path: "models/fall_risk_model.pt"
+  embedding_dim: 128
+  monitor_metric: "pr_auc_samples"
+
+# Risk calibration and stratification thresholds
+risk_thresholds:
+  critical: 0.65
+  high: 0.50
+  moderate: 0.30
+  low: 0.0
+
+# Inference engine runtime flags
+inference:
+  batch_size: 32
+  enable_attention_weights: true
+  enable_deprescribing_simulator: true
+  safety_guardrails:
+    - "AGS Beers Criteria 2023"
+    - "STOPP/START v3"
+    - "FRID Classification"
+    - "Renal Clearance Contraindications"

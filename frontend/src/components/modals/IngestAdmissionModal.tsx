@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo, useEffect, useCallback } from "react";
+import React, { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import {
   X,
   User,
@@ -18,17 +18,34 @@ import {
   Clock,
   ArrowRight,
   Check,
-  CheckSquare,
-  Square,
   Sparkles,
 } from "lucide-react";
-import { Patient, AcuityTier } from "@/types/patient";
+import { AdmissionRequest, AcuityTier } from "@/types/patient";
 import { searchCuratedDrugs } from "@/lib/drugVocabulary";
+import { apiRequest } from "@/lib/api";
 
 interface IngestAdmissionModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onIngest: (patientData: Partial<Patient>) => void;
+  onIngest: (patientData: AdmissionRequest) => Promise<void>;
+}
+
+interface PipelineResponse {
+  pipeline_stages?: {
+    stage_2_gnn_inference?: {
+      risk_percentage?: number;
+      acuity_tier?: AcuityTier;
+      relative_risk?: string;
+      model_confidence?: string;
+      w_ddi_burden_score?: number | string;
+      detected_interactions?: Array<{ pair: string | string[]; mechanism?: string; attention_weight?: number | string }>;
+      top_features?: Array<{ feature: string; importance?: number }>;
+    };
+    stage_3_medgemma_verification?: {
+      clinical_rationale?: string;
+      primary_culprit_cascade?: string[];
+    };
+  };
 }
 
 // 8 Codified FRID Categories from AGS Beers 2023 and STOPP v3
@@ -77,8 +94,16 @@ export function IngestAdmissionModal({
 
   // 5. Ingestion UI state
   const [isComputing, setIsComputing] = useState(false);
-  const [pipelineStage, setPipelineStage] = useState<"idle" | "structuring" | "gnn_inference" | "verifying" | "complete">("complete");
-  const [pipelineData, setPipelineData] = useState<any>(null);
+  const [pipelineStage, setPipelineStage] = useState<"idle" | "structuring" | "gnn_inference" | "verifying" | "complete">("idle");
+  const [pipelineResult, setPipelineResult] = useState<{ inputKey: string; data: PipelineResponse } | null>(null);
+  const [pipelineError, setPipelineError] = useState<string | null>(null);
+  const [ingestError, setIngestError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const pipelineController = useRef<AbortController | null>(null);
+  const inputKey = JSON.stringify({ name, mrn, age, gender, bed, creatinine, creatinineMin, creatinineMax, creatinineAvg, drugsInput });
+  const pipelineData = pipelineResult?.inputKey === inputKey ? pipelineResult.data : null;
+
+  useEffect(() => () => pipelineController.current?.abort(), []);
 
   // Interactive MedGemma Query state
   const [clinicalQuery, setClinicalQuery] = useState("");
@@ -189,12 +214,13 @@ export function IngestAdmissionModal({
   // Detected Pairwise DDI
   const detectedDdiPairs = useMemo<Array<{ pair: string; mechanism: string; attnWeight: string }>>(() => {
     if (pipelineData?.pipeline_stages?.stage_2_gnn_inference?.detected_interactions?.length) {
-      return pipelineData.pipeline_stages.stage_2_gnn_inference.detected_interactions.map((d: any) => ({
+      return pipelineData.pipeline_stages.stage_2_gnn_inference.detected_interactions.map((d) => ({
         pair: Array.isArray(d.pair) ? `${d.pair[0]} ↔ ${d.pair[1]}` : String(d.pair),
         mechanism: d.mechanism || "Pharmacodynamic Synergism",
         attnWeight: typeof d.attention_weight === "number" ? d.attention_weight.toFixed(3) : String(d.attention_weight || "0.600"),
       }));
     }
+    if (pipelineData) return [];
     const lower = drugsInput.toLowerCase();
     const pairs: Array<{ pair: string; mechanism: string; attnWeight: string }> = [];
 
@@ -262,7 +288,7 @@ export function IngestAdmissionModal({
         relativeRisk: s2.relative_risk ? (s2.relative_risk.includes("vs") ? s2.relative_risk : `${s2.relative_risk} vs baseline`) : `${(risk / 18.2).toFixed(2)}x vs baseline`,
         acuityTier: tier,
         acuityTierLabel: `${tier.toUpperCase()} HAZARD TIER`,
-        confidence: s2.model_confidence || "95.2%",
+        confidence: s2.model_confidence || "Unavailable",
         wDdiScore: String(s2.w_ddi_burden_score ?? "0.92"),
       };
     }
@@ -284,7 +310,7 @@ export function IngestAdmissionModal({
       relativeRisk: relRisk,
       acuityTier: tier,
       acuityTierLabel: `${tier.toUpperCase()} HAZARD TIER`,
-      confidence: "95.2%",
+      confidence: "Demo estimate",
       wDdiScore: totalFridCount >= 3 ? "1.42" : totalFridCount >= 1 ? "0.92" : "0.25",
     };
   }, [pipelineData, calculatedEgfr, totalFridCount, cnsPolypharmacyFlag, parsedDrugs.length]);
@@ -292,7 +318,7 @@ export function IngestAdmissionModal({
   // Dynamic Feature Attributions
   const featureAttributions = useMemo<Array<{ feature: string; importancePct: number; color: string; textColor: string }>>(() => {
     if (pipelineData?.pipeline_stages?.stage_2_gnn_inference?.top_features?.length) {
-      return pipelineData.pipeline_stages.stage_2_gnn_inference.top_features.map((f: any, idx: number) => {
+      return pipelineData.pipeline_stages.stage_2_gnn_inference.top_features.map((f, idx) => {
         const colors = [
           { bar: "bg-rose-500", text: "text-rose-600" },
           { bar: "bg-amber-500", text: "text-amber-600" },
@@ -302,12 +328,13 @@ export function IngestAdmissionModal({
         const c = colors[idx % colors.length];
         return {
           feature: f.feature,
-          importancePct: Math.round((f.importance || 0.25) * 100),
+          importancePct: Math.round((f.importance ?? 0) * 100),
           color: c.bar,
           textColor: c.text,
         };
       });
     }
+    if (pipelineData) return [];
     return [
       { feature: "wDDI Interacting Pairs Burden", importancePct: 38, color: "bg-rose-500", textColor: "text-rose-600" },
       { feature: `eGFR Decline (${ckdStage})`, importancePct: 29, color: "bg-amber-500", textColor: "text-amber-600" },
@@ -321,15 +348,17 @@ export function IngestAdmissionModal({
     if (pipelineData?.pipeline_stages?.stage_3_medgemma_verification?.clinical_rationale) {
       return pipelineData.pipeline_stages.stage_3_medgemma_verification.clinical_rationale;
     }
+    if (pipelineData) return "No server clinical rationale is available.";
     const medList = parsedDrugs.join(", ") || "the active regimen";
-    return `MedGemma 1.5 confirms the GNN ${gnnDisplay.riskPercentage}% (${gnnDisplay.acuityTier}) risk prediction. For patient ${name} (${age}yo, eGFR ${calculatedEgfr} mL/min — ${ckdStage}), ${medList} induces hemodynamic and postural instability. The synergistic convergence of orthostatic hypoperfusion and sedative psychomotor slowing creates an acute 48-hour fall trajectory requiring structured deprescribing.`;
-  }, [pipelineData, gnnDisplay, name, age, calculatedEgfr, ckdStage, parsedDrugs]);
+    return `Local demonstration estimate: ${gnnDisplay.riskPercentage}% (${gnnDisplay.acuityTier}) for ${name} (${age}yo), with ${medList}. Run the server pipeline for an evaluated clinical rationale. This summary has not been verified by MedGemma.`;
+  }, [pipelineData, gnnDisplay, name, age, parsedDrugs]);
 
   // Dynamic Prescribing Cascade
   const culpritCascade = useMemo<string[]>(() => {
     if (pipelineData?.pipeline_stages?.stage_3_medgemma_verification?.primary_culprit_cascade?.length) {
       return pipelineData.pipeline_stages.stage_3_medgemma_verification.primary_culprit_cascade;
     }
+    if (pipelineData) return [];
     const items: string[] = [];
     const lower = drugsInput.toLowerCase();
     if (lower.includes("hydralazine")) {
@@ -360,17 +389,15 @@ export function IngestAdmissionModal({
 
   // Run Pipeline
   const handleRunPipeline = useCallback(async () => {
+    if (isComputing) return;
     setIsComputing(true);
-    setPipelineStage("structuring");
-    await new Promise((r) => setTimeout(r, 350));
+    setPipelineError(null);
+    setPipelineResult(null);
     setPipelineStage("gnn_inference");
-    await new Promise((r) => setTimeout(r, 450));
-    setPipelineStage("verifying");
-
+    const controller = new AbortController();
+    pipelineController.current = controller;
     try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 6000);
-      const res = await fetch("http://127.0.0.1:8000/api/medgemma/pipeline", {
+      const data = await apiRequest<PipelineResponse>("/medgemma/pipeline", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         signal: controller.signal,
@@ -387,20 +414,23 @@ export function IngestAdmissionModal({
           drugs_text: drugsInput,
           save_to_census: false,
         }),
-      });
-      clearTimeout(timeoutId);
-      if (res.ok) {
-        const data = await res.json();
-        setPipelineData(data);
+      }, 60000);
+      if (!Number.isFinite(data.pipeline_stages?.stage_2_gnn_inference?.risk_percentage)) {
+        throw new Error("The server did not return a valid risk analysis.");
       }
-    } catch (e) {
-      console.warn("API offline or slow; using local high-precision calibrated pipeline", e);
+      if (!controller.signal.aborted) {
+        setPipelineResult({ inputKey, data });
+        setPipelineStage("complete");
+      }
+    } catch (error) {
+      if (!controller.signal.aborted) {
+        setPipelineError(error instanceof Error ? error.message : "The pipeline could not complete.");
+        setPipelineStage("idle");
+      }
     } finally {
-      await new Promise((r) => setTimeout(r, 300));
-      setPipelineStage("complete");
-      setIsComputing(false);
+      if (!controller.signal.aborted) setIsComputing(false);
     }
-  }, [name, mrn, age, gender, bed, creatinine, creatinineMin, creatinineMax, creatinineAvg, drugsInput]);
+  }, [isComputing, inputKey, name, mrn, age, gender, bed, creatinine, creatinineMin, creatinineMax, creatinineAvg, drugsInput]);
 
   // Handle Interactive Question
   const handleAskMedGemma = async () => {
@@ -411,15 +441,15 @@ export function IngestAdmissionModal({
     const q = clinicalQuery.toLowerCase();
     if (q.includes("lorazepam") || q.includes("taper") || q.includes("sleep")) {
       setQueryResponse(
-        `MedGemma 1.5 Recommendation: De-escalating sedative agents by 50% reduces GABAA receptor chloride hyperpolarization, lowering projected 48h fall probability from ${gnnDisplay.riskPercentage}% to ${Math.max(10, Math.round(gnnDisplay.riskPercentage * 0.65 * 10) / 10)}% while preserving sleep initiation.`
+        `Local demonstration: De-escalating sedative agents by 50% reduces GABAA receptor chloride hyperpolarization, lowering projected 48h fall probability from ${gnnDisplay.riskPercentage}% to ${Math.max(10, Math.round(gnnDisplay.riskPercentage * 0.65 * 10) / 10)}% while preserving sleep initiation.`
       );
     } else if (q.includes("hydralazine") || q.includes("blood pressure") || q.includes("bp") || q.includes("pressure")) {
       setQueryResponse(
-        `MedGemma 1.5 Recommendation: Hydralazine-induced arteriolar vasodilation compounds orthostatic drop (eGFR ${calculatedEgfr} mL/min). Re-titrating dose with mandatory seated/standing orthostatic vitals eliminates peak postural hypotension.`
+        `Local demonstration: Hydralazine-induced arteriolar vasodilation compounds orthostatic drop (eGFR ${calculatedEgfr} mL/min). Re-titrating dose with mandatory seated/standing orthostatic vitals eliminates peak postural hypotension.`
       );
     } else {
       setQueryResponse(
-        `MedGemma 1.5 Analysis: In this patient (${age}yo ${gender.toLowerCase()}, eGFR ${calculatedEgfr} mL/min [${ckdStage}]), optimizing ${parsedDrugs.slice(0, 2).join(" & ") || "the active regimen"} and mitigating ${gnnDisplay.acuityTier} risk addresses the primary fall trajectory according to AGS Beers 2023 guidelines.`
+        `Local demonstration: In this patient (${age}yo ${gender.toLowerCase()}, eGFR ${calculatedEgfr} mL/min [${ckdStage}]), optimizing ${parsedDrugs.slice(0, 2).join(" & ") || "the active regimen"} and mitigating ${gnnDisplay.acuityTier} risk addresses the primary fall trajectory according to AGS Beers 2023 guidelines.`
       );
     }
     setIsQuerying(false);
@@ -427,26 +457,27 @@ export function IngestAdmissionModal({
 
   if (!isOpen) return null;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    onIngest({
+    if (isSubmitting || isComputing) return;
+    setIsSubmitting(true);
+    setIngestError(null);
+    try {
+      await onIngest({
       name,
       mrn,
       age: Number(age),
       gender,
       bed,
       creatinine: Number(creatinine),
-      renal_egfr: calculatedEgfr,
-      renal_stage: ckdStage,
-      drug_count: parsedDrugs.length,
-      risk_percentage: gnnDisplay.riskPercentage,
-      acuity_tier: gnnDisplay.acuityTier,
-      high_risk_meds: parsedDrugs.slice(0, 3),
-      recommendation_tags: `GNN wDDI: ${gnnDisplay.wDdiScore} • Beers 2023`,
-      review_badge: "Unreviewed",
-      review_time: "Just ingested",
+      drugs: parsedDrugs,
     });
     onClose();
+    } catch (error) {
+      setIngestError(error instanceof Error ? error.message : "The admission could not be saved.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -467,7 +498,7 @@ export function IngestAdmissionModal({
             <button
               type="button"
               onClick={handleRunPipeline}
-              disabled={isComputing}
+              disabled={isComputing || isSubmitting}
               className="inline-flex items-center gap-2 rounded-lg bg-[#0e3b33] hover:bg-[#092923] px-4 py-2 text-xs font-bold text-white shadow-xs transition active:scale-95 cursor-pointer disabled:opacity-60"
             >
               <Zap className="w-4 h-4 fill-emerald-400 text-emerald-400" />
@@ -486,6 +517,11 @@ export function IngestAdmissionModal({
 
         {/* MODAL BODY (TWO COLUMNS) */}
         <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-5 sm:p-6 grid grid-cols-1 lg:grid-cols-12 gap-5">
+          <div className="lg:col-span-12 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
+            {pipelineData ? "Server analysis is available for these inputs." : "Local estimates, feature weights, and query responses below are demonstrations. Run the server pipeline to evaluate these inputs."}
+            {pipelineError && <p role="alert" className="mt-1">Pipeline failed: {pipelineError}</p>}
+            {ingestError && <p role="alert" className="mt-1">Admission was not saved: {ingestError}</p>}
+          </div>
           {/* LEFT COLUMN: GNN INPUT FEATURES (7 Cols) */}
           <div className="lg:col-span-7 space-y-4 text-xs text-slate-700">
             {/* 1. PATIENT DEMOGRAPHICS & INPATIENT IDENTIFICATION */}
@@ -887,10 +923,10 @@ export function IngestAdmissionModal({
                     Stage 3: Verifying...
                   </span>
                 )}
-                {pipelineStage === "complete" && (
+                {pipelineStage === "complete" && pipelineData && (
                   <span className="rounded-md border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700 flex items-center gap-1">
                     <Check className="w-3 h-3 stroke-[3]" />
-                    Pipeline Complete (Verified)
+                    Server Analysis Complete
                   </span>
                 )}
                 {pipelineStage === "idle" && (
@@ -1143,12 +1179,12 @@ export function IngestAdmissionModal({
               <div className="space-y-2 pt-2 border-t border-indigo-100/80">
                 <div className="flex items-center justify-between text-xs">
                   <span className="font-bold text-slate-900">
-                    Interactive Clinical Query (MedGemma 1.5):
+                    Interactive Clinical Query (Local Demo):
                   </span>
                   <div className="flex items-center gap-1.5 text-[10px] text-indigo-700">
-                    <span className="font-mono">Gemma-2B-Clinical</span>
+                    <span className="font-mono">Sample response</span>
                     <span>•</span>
-                    <span className="font-mono">Fine-Tuned</span>
+                    <span className="font-mono">Not verified</span>
                   </div>
                 </div>
 
@@ -1177,13 +1213,18 @@ export function IngestAdmissionModal({
                   <div className="rounded-lg border border-emerald-200 bg-emerald-50/80 p-2.5 text-xs text-emerald-900 animate-in fade-in">
                     <div className="font-bold mb-0.5 flex items-center gap-1">
                       <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
-                      <span>MedGemma 1.5 Response:</span>
+                      <span>Local Demonstration Response:</span>
                     </div>
                     <p className="text-[11px] leading-relaxed">{queryResponse}</p>
                   </div>
                 )}
               </div>
             </div>
+          </div>
+          <div className="lg:col-span-12 flex justify-end">
+            <button type="submit" disabled={isSubmitting || isComputing || !name.trim()} className="rounded-lg bg-[#0e3b33] px-4 py-2 text-xs font-semibold text-white disabled:opacity-50">
+              {isSubmitting ? "Saving admission…" : "Save Admission to Ward"}
+            </button>
           </div>
         </form>
       </div>

@@ -1,0 +1,31 @@
+# ==============================================================================
+# GeriSafe CDSS - Data Pipeline Configuration
+# ==============================================================================
+
+# Directory and artifact paths
+paths:
+  raw_mimic_dir: "data/raw/mimic4/hosp"
+  processed_dir: "data/processed"
+  external_dir: "data/external"
+  cohort_parquet: "data/processed/geriatric_fall_cohort.parquet"
+  cohort_flags_parquet: "data/processed/cohort_with_safety_flags.parquet"
+  features_parquet: "data/processed/geriatric_features_with_ddi.parquet"
+  patient_graphs_pt: "data/processed/patient_graphs.pt"
+  drug_vocab_json: "data/processed/gnn_drug_vocab.json"
+  drug_vocab_pkl: "data/processed/drug_vocab.pkl"
+  knowledge_base_dir: "data/knowledge_base"
+  chroma_db_dir: "data/chroma_clinical_kb"
+
+# Cohort selection criteria
+cohort:
+  min_age: 65
+  max_age: 105
+  min_medications: 5
+  time_window_hours: 24
+  target_event: "inpatient_fall_risk"
+
+# Vocabulary and feature extraction
+vocabulary:
+  coding_system: "ATC-3"
+  top_k_drugs: 5034
+  unknown_token: "<UNK>"

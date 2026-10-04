@@ -5,8 +5,11 @@ and FHIR R4 Bundle generation.
 """
 
 from typing import List, Dict, Any, Optional
+from copy import deepcopy
 import datetime
 import uuid
+
+from src.api.state import WARD_STATE_LOCK
 
 # Base cohort data matching the exact screenshot
 PRIMARY_INPATIENTS: List[Dict[str, Any]] = [
@@ -237,7 +240,7 @@ ADDITIONAL_PATIENT_NAMES = [
 ]
 
 def build_full_ward_census() -> List[Dict[str, Any]]:
-    census = list(PRIMARY_INPATIENTS)
+    census = deepcopy(PRIMARY_INPATIENTS)
     start_hadm = 994210
     start_mrn = 80100
     
@@ -276,8 +279,14 @@ def build_full_ward_census() -> List[Dict[str, Any]]:
 FULL_WARD_CENSUS = build_full_ward_census()
 
 def get_ward_kpi_metrics() -> Dict[str, Any]:
+    with WARD_STATE_LOCK:
+        high_risk_count = sum(p["acuity_tier"] in {"Critical", "High"} for p in FULL_WARD_CENSUS)
     return {
-        "high_fall_risk_count": 11,
+        "data_source": {
+            "high_fall_risk_count": "live_census",
+            "remaining_metrics": "demonstration_fixture",
+        },
+        "high_fall_risk_count": high_risk_count,
         "high_fall_risk_today_delta": 2,
         "acute_admissions_flagged_12h": 3,
         "active_pim_alerts_count": 19,
@@ -292,56 +301,65 @@ def get_ward_kpi_metrics() -> Dict[str, Any]:
     }
 
 def get_ward_risk_distribution() -> Dict[str, Any]:
-    return {
-        "total_inpatients": 48,
+    with WARD_STATE_LOCK:
+        total = len(FULL_WARD_CENSUS)
+        counts = {tier: sum(p["acuity_tier"].lower() == tier for p in FULL_WARD_CENSUS) for tier in ("critical", "high", "moderate", "low")}
+    distribution = {
+        "total_inpatients": total,
         "stratums": [
             {
                 "id": "critical",
-                "label": "Critical Risk (>60%)",
-                "criteria": ">60%",
-                "patient_count": 3,
-                "percentage": 6.3,
+                "label": "Critical Risk",
+                "criteria": "Assigned Critical tier",
                 "color_class": "bg-[#ef4444]",
                 "bar_color": "#ef4444"
             },
             {
                 "id": "high",
-                "label": "High Risk (41-60%)",
-                "criteria": "41-60%",
-                "patient_count": 8,
-                "percentage": 16.7,
+                "label": "High Risk",
+                "criteria": "Assigned High tier",
                 "color_class": "bg-[#f59e0b]",
                 "bar_color": "#f59e0b"
             },
             {
                 "id": "moderate",
-                "label": "Moderate Risk (20-40%)",
-                "criteria": "20-40%",
-                "patient_count": 19,
-                "percentage": 39.6,
+                "label": "Moderate Risk",
+                "criteria": "Assigned Moderate tier",
                 "color_class": "bg-[#0d9488]",
                 "bar_color": "#0d9488"
             },
             {
                 "id": "low",
-                "label": "Low Risk (<20%)",
-                "criteria": "<20%",
-                "patient_count": 18,
-                "percentage": 37.5,
+                "label": "Low Risk",
+                "criteria": "Assigned Low tier",
                 "color_class": "bg-[#10b981]",
                 "bar_color": "#10b981"
             }
         ]
     }
+    for stratum in distribution["stratums"]:
+        stratum["patient_count"] = counts[stratum["id"]]
+        stratum["percentage"] = round(100 * stratum["patient_count"] / total, 1) if total else 0
+    return distribution
 
-def generate_fhir_r4_bundle(patient_id: Optional[str] = None) -> Dict[str, Any]:
-    bundle_id = f"urn:uuid:{uuid.uuid4()}"
-    timestamp = datetime.datetime.utcnow().isoformat() + "Z"
-    
-    pat = next((p for p in FULL_WARD_CENSUS if str(p["hadm_id"]) == str(patient_id) or p["mrn"] == patient_id), FULL_WARD_CENSUS[3])
+def generate_fhir_r4_bundle(patient_id: Optional[str] = None, *, patient: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    timestamp = datetime.datetime.now(datetime.timezone.utc).isoformat().replace("+00:00", "Z")
+    with WARD_STATE_LOCK:
+        if patient is not None:
+            pat = deepcopy(patient)
+        elif patient_id is None:
+            if not FULL_WARD_CENSUS:
+                raise ValueError("No patients are available for export.")
+            pat = deepcopy(FULL_WARD_CENSUS[min(3, len(FULL_WARD_CENSUS) - 1)])
+        else:
+            match = next((p for p in FULL_WARD_CENSUS if str(p["hadm_id"]) == str(patient_id) or p["mrn"] == patient_id), None)
+            if match is None:
+                raise ValueError("Patient not found.")
+            pat = deepcopy(match)
+    patient_url = f"urn:uuid:{uuid.uuid4()}"
     
     patient_resource = {
-        "fullUrl": f"urn:uuid:patient-{pat['hadm_id']}",
+        "fullUrl": patient_url,
         "resource": {
             "resourceType": "Patient",
             "id": str(pat["hadm_id"]),
@@ -359,19 +377,18 @@ def generate_fhir_r4_bundle(patient_id: Optional[str] = None) -> Dict[str, Any]:
                     "given": pat["name"].split()[:-1]
                 }
             ],
-            "gender": pat["gender"].lower(),
-            "birthDate": (datetime.datetime.utcnow() - datetime.timedelta(days=int(pat["age"]*365.25))).strftime("%Y-%m-%d")
+            "gender": pat["gender"].lower() if pat["gender"].lower() in {"male", "female", "other", "unknown"} else "unknown",
         }
     }
     
     risk_assessment_resource = {
-        "fullUrl": f"urn:uuid:risk-{pat['hadm_id']}",
+        "fullUrl": f"urn:uuid:{uuid.uuid4()}",
         "resource": {
             "resourceType": "RiskAssessment",
             "id": f"risk-{pat['hadm_id']}",
             "status": "final",
             "subject": {
-                "reference": f"Patient/{pat['hadm_id']}",
+                "reference": patient_url,
                 "display": pat["name"]
             },
             "occurrenceDateTime": timestamp,
@@ -411,9 +428,10 @@ def generate_fhir_r4_bundle(patient_id: Optional[str] = None) -> Dict[str, Any]:
     }
     
     medication_entries = []
-    for idx, med_name in enumerate(pat.get("high_risk_meds", ["Lorazepam 1.0mg PO", "Furosemide 40mg PO"])):
+    medication_names = [med["name"] for med in pat["active_medications"]] if "active_medications" in pat else pat.get("high_risk_meds", [])
+    for idx, med_name in enumerate(medication_names):
         medication_entries.append({
-            "fullUrl": f"urn:uuid:med-{pat['hadm_id']}-{idx}",
+            "fullUrl": f"urn:uuid:{uuid.uuid4()}",
             "resource": {
                 "resourceType": "MedicationRequest",
                 "id": f"med-{pat['hadm_id']}-{idx}",
@@ -423,7 +441,7 @@ def generate_fhir_r4_bundle(patient_id: Optional[str] = None) -> Dict[str, Any]:
                     "text": med_name
                 },
                 "subject": {
-                    "reference": f"Patient/{pat['hadm_id']}"
+                    "reference": patient_url
                 }
             }
         })
@@ -439,6 +457,5 @@ def generate_fhir_r4_bundle(patient_id: Optional[str] = None) -> Dict[str, Any]:
         },
         "type": "collection",
         "timestamp": timestamp,
-        "total": len(entries),
         "entry": entries
     }

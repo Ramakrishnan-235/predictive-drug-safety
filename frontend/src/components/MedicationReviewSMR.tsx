@@ -15,7 +15,6 @@ import {
   AlertTriangle,
   ChevronDown,
   RefreshCw,
-  Sparkles,
 } from "lucide-react";
 import {
   LineChart,
@@ -67,6 +66,7 @@ export function MedicationReviewSMR({
   const [signedSuccess, setSignedSuccess] = useState(false);
   const [expandOtherMeds, setExpandOtherMeds] = useState(false);
   const [copyFeedback, setCopyFeedback] = useState(false);
+  const [copyError, setCopyError] = useState<string | null>(null);
 
   // Dynamic calculation of simulated risk based on checkboxes
   const baselineRisk = 68.4;
@@ -78,13 +78,17 @@ export function MedicationReviewSMR({
   const reductionPts = Number((baselineRisk - simulatedRisk).toFixed(1));
   const relativeReductionPct = Math.round((reductionPts / baselineRisk) * 100);
 
-  const activeLeversCount = [lever1, lever2, lever3].filter(Boolean).length;
-
-  const handleCopyEhr = () => {
-    const summary = `GeriSafe CDSS SMR Note - Robert Miller (#994201, Bed 401-A)\nBaseline Risk: ${baselineRisk}% (Critical) -> Simulated Post-Rx: ${simulatedRisk}% (Moderate)\nActions: Lorazepam 50% taper, Deprescribe Diphenhydramine 25mg, Reschedule Furosemide 08:00 AM.`;
-    navigator.clipboard.writeText(summary);
-    setCopyFeedback(true);
-    setTimeout(() => setCopyFeedback(false), 2000);
+  const handleCopyEhr = async () => {
+    const actions = [lever1 && "Lorazepam 50% taper", lever2 && "Deprescribe Diphenhydramine 25mg", lever3 && "Reschedule Furosemide 08:00 AM"].filter(Boolean);
+    const summary = `DEMONSTRATION ONLY - GeriSafe SMR Sample - Robert Miller (#994201, Bed 401-A)\nSample baseline risk: ${baselineRisk}% -> Local simulated risk: ${simulatedRisk}%\nPreview actions: ${actions.join(", ") || "None"}. No orders have been submitted.`;
+    try {
+      await navigator.clipboard.writeText(summary);
+      setCopyFeedback(true);
+      setCopyError(null);
+      setTimeout(() => setCopyFeedback(false), 2000);
+    } catch {
+      setCopyError("Clipboard access is unavailable.");
+    }
   };
 
   const handleSignOrders = () => {
@@ -94,6 +98,10 @@ export function MedicationReviewSMR({
 
   return (
     <div className="w-full space-y-3.5 pb-8 font-sans antialiased text-slate-900">
+      <div role="status" className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
+        Demonstration for Robert Miller. Values, medication simulations and charts are sample data. Review an actual ward patient from the triage table to authorize available plans.
+      </div>
+      {copyError && <p role="alert" className="text-xs text-rose-700">{copyError}</p>}
       {/* 1. TOP BREADCRUMB SUB-HEADER BAR */}
       <div className="flex flex-wrap items-center justify-between gap-2 py-1.5 px-1 text-xs text-slate-500">
         <div className="flex items-center gap-2 flex-wrap">
@@ -113,7 +121,7 @@ export function MedicationReviewSMR({
           <span className="text-slate-300">•</span>
           <div className="flex items-center gap-1.5 text-slate-600">
             <span className="w-2 h-2 rounded-full bg-emerald-500" />
-            <span>EHR Bridge: EPIC Hyperspace v2024.1 (Live Sync)</span>
+            <span>EHR Bridge: Demonstration Preview</span>
           </div>
           <span className="text-slate-300">•</span>
           <span className="text-slate-400 font-mono text-[11px]">
@@ -157,7 +165,7 @@ export function MedicationReviewSMR({
               className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-2xs hover:bg-slate-50 transition cursor-pointer"
             >
               <Copy className="w-3.5 h-3.5 text-slate-500" />
-              <span>{copyFeedback ? "Copied!" : "Copy to EHR"}</span>
+              <span>{copyFeedback ? "Copied!" : "Copy Demo Summary"}</span>
             </button>
 
             <button
@@ -181,7 +189,7 @@ export function MedicationReviewSMR({
               className="inline-flex items-center gap-1.5 rounded-lg bg-[#1b3b36] hover:bg-[#142e2a] px-4 py-2 text-xs font-semibold text-white shadow-sm transition cursor-pointer"
             >
               <ShieldCheck className="w-4 h-4" />
-              <span>Sign CPOE Orders (3)</span>
+              <span>Preview {[queueA, queueB, queueC].filter(Boolean).length} Demo Adjustments</span>
             </button>
           </div>
         </div>
@@ -262,7 +270,7 @@ export function MedicationReviewSMR({
           <div className="mt-3 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2 flex items-center gap-2 text-xs text-emerald-800 animate-in fade-in">
             <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
             <span>
-              Orders signed! 3 deprescribing orders authorized by Dr. Sarah Chen and transmitted to EHR Pharmacy queue.
+              Previewed {[queueA, queueB, queueC].filter(Boolean).length} sample adjustments. No orders were submitted.
             </span>
           </div>
         )}
@@ -1045,11 +1053,12 @@ export function MedicationReviewSMR({
             <div className="pt-4 mt-2">
               <button
                 onClick={handleSignOrders}
+                disabled={[queueA, queueB, queueC].every(queued => !queued)}
                 className="w-full rounded-xl bg-[#1b3b36] hover:bg-[#142e2a] text-white font-semibold text-xs py-3 shadow-sm transition flex items-center justify-center gap-2 cursor-pointer"
               >
                 <ShieldCheck className="w-4 h-4" />
                 <span>
-                  Accept &amp; Sign {activeLeversCount} Adjustments (Projected: {simulatedRisk}%) →
+                  Preview {[queueA, queueB, queueC].filter(Boolean).length} Demo Adjustments →
                 </span>
               </button>
 
@@ -1069,7 +1078,7 @@ export function MedicationReviewSMR({
 
       {/* 4. GLOBAL BOTTOM STATUS / COMPLIANCE BAR */}
       <div className="flex flex-col sm:flex-row items-center justify-between gap-2 py-4 px-1 text-xs text-slate-400 border-t border-slate-200/80 mt-4">
-        <span>Clinical Decision Support Platform • ISO 13485 &amp; HIPAA Compliant</span>
+        <span>Clinical Decision Support Platform • Demonstration Preview</span>
         <span className="flex items-center gap-2 text-slate-500 font-medium">
           <span className="w-2 h-2 rounded-full bg-emerald-500" />
           Ward 4B Session Active

@@ -32,3 +32,8 @@ explicit = true
 
 [tool.uv.sources]
 torch = { index = "pytorch-cu124" }
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+addopts = "-v"

@@ -22,10 +22,10 @@ export interface Patient {
   drug_count: number;
   prn_count: number;
   creatinine: number;
-  renal_egfr: number;
-  renal_stage: string;
-  blood_pressure: string;
-  bp_drop: number;
+  renal_egfr: number | null;
+  renal_stage: string | null;
+  blood_pressure: string | null;
+  bp_drop: number | null;
   primary_pim?: PrimaryPim;
   secondary_pim?: string;
   high_risk_meds: string[];
@@ -44,6 +44,10 @@ export interface Patient {
 }
 
 export interface WardKpis {
+  data_source?: {
+    high_fall_risk_count: "live_census";
+    remaining_metrics: "demonstration_fixture";
+  };
   high_fall_risk_count: number;
   high_fall_risk_today_delta: number;
   acute_admissions_flagged_12h: number;
@@ -69,6 +73,7 @@ export interface RiskStratum {
 }
 
 export interface WardDistribution {
+  data_source?: string;
   total_inpatients: number;
   stratums: RiskStratum[];
 }
@@ -81,6 +86,42 @@ export interface TelemetryEvent {
   active_patients: number;
   high_risk_count: number;
   alert?: string;
+  source?: "backend" | "demo";
+}
+
+export interface AdmissionRequest {
+  name: string;
+  mrn: string;
+  age: number;
+  gender: "MALE" | "FEMALE";
+  bed: string;
+  creatinine: number;
+  drugs: string[];
+}
+
+export interface DeprescribingPlan {
+  id: string;
+  title: string;
+  description?: string;
+  desc?: string;
+  impact?: string;
+  is_queued?: boolean;
+}
+
+export interface PatientDetail {
+  hadm_id: number;
+  clinical_rationale?: string;
+  deprescribing_plans?: DeprescribingPlan[];
+}
+
+export interface SignOrdersResponse {
+  success: boolean;
+  patient_id: string;
+  new_risk: number;
+  acuity_tier: AcuityTier;
+  signed_actions: string[];
+  audit_id: string;
+  message?: string;
 }
 
 export type FilterType = "all" | "critical" | "high" | "pim" | "renal";

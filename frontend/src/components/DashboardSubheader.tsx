@@ -45,7 +45,7 @@ export function DashboardSubheader({
           <span>Geriatric Polypharmacy Ward ({patientCount} Active Patients)</span>
           <span className="text-slate-300">•</span>
           <span className="text-slate-500">
-            Live telemetry synchronized {syncTimeAgo}
+            {isLive ? `Live telemetry synchronized ${syncTimeAgo}` : `Telemetry offline • last sync: ${syncTimeAgo}`}
           </span>
         </div>
       </div>
@@ -71,4 +71,3 @@ export function DashboardSubheader({
     </div>
   );
 }
-

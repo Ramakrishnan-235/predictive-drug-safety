@@ -1,5 +1,17 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
+## API connection and data provenance
+
+Set `NEXT_PUBLIC_API_BASE_URL` to the API base including `/api` (default: `http://127.0.0.1:8000/api`). This public setting is shared by ward reads, admission saves, order authorization, FHIR exports and the server telemetry proxy. Restart/rebuild Next.js after changing it.
+
+Ward rows displayed during loading are explicitly labeled sample records and cannot authorize orders. Admission saves and CPOE authorization require successful API responses. The drawer uses the selected patient's server plans; patients without plans require clinical review. Authorization records an audit event without claiming EHR transmission or changing predicted risk.
+
+The standalone SMR and trajectory screens remain sample demonstrations. Their adjustment previews do not submit orders. Admission estimates and local query responses are labeled demonstrations until a server pipeline result is available for the current inputs. Offline SSE pulses are labeled demo data and cannot establish live synchronization.
+
+## Verification
+
+Run `npm run lint`, `npx tsc --noEmit` and `npm run build`. Run `npm test` for dependency-free API, normalization and SSE lifecycle regressions; the tests require Node.js 22.6 or newer for TypeScript stripping. These checks do not validate a deployed EHR integration or model quality.
+
 ## Getting Started
 
 First, run the development server:

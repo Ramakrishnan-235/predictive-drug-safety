@@ -1,21 +1,24 @@
 import duckdb
+import sys
 from pathlib import Path
 
-RAW_DIR = Path("data/raw/hosp")
-PROCESSED_DIR = Path("data/processed")
-PROCESSED_DIR.mkdir(parents=True, exist_ok=True)
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
+from src.data_prep.paths import PROJECT_ROOT, resolve_hospital_directory, resolve_table_path
+
+RAW_DIR = resolve_hospital_directory()
+PROCESSED_DIR = PROJECT_ROOT / "data/processed"
 
 
 def get_table_path(table_name: str) -> str:
     """Finds .csv.gz or .csv for a given table name and returns a POSIX path."""
-    for ext in [".csv.gz", ".csv"]:
-        p = RAW_DIR / f"{table_name}{ext}"
-        if p.exists():
-            return p.as_posix()
-    return (RAW_DIR / f"{table_name}.csv.gz").as_posix()
+    return resolve_table_path(RAW_DIR, table_name).as_posix()
 
 
 def run_cohort_pipeline():
+    PROCESSED_DIR.mkdir(parents=True, exist_ok=True)
     con = duckdb.connect()
 
     # Optimize DuckDB engine parameters

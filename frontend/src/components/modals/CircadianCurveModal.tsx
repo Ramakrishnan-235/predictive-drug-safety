@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { X, TrendingUp, Moon, Sun, AlertTriangle } from "lucide-react";
+import { X, TrendingUp, Moon } from "lucide-react";
 import {
   AreaChart,
   Area,

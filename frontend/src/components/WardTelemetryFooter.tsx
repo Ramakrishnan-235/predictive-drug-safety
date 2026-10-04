@@ -10,7 +10,6 @@ import {
   MessageSquare,
   AlertTriangle,
   Clock,
-  CheckCircle,
 } from "lucide-react";
 import { WardDistribution } from "@/types/patient";
 

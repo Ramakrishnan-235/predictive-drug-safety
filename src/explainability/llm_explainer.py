@@ -11,9 +11,7 @@ import json
 import yaml
 import httpx
 from typing import List, Dict, Any, Optional
-from pydantic import BaseModel, Field
-
-from src.explainability.clinical_explainer import ClinicalRecommendation
+from src.explainability.recommendation import ClinicalRecommendation, recommendation_from_response
 
 CONFIG_PATH = Path("configs/llm.yaml")
 
@@ -22,11 +20,25 @@ class LLMClinicalExplainer:
     def __init__(self, config_path: str = "configs/llm.yaml"):
         self.config = self._load_config(config_path)
         self.provider = self._resolve_provider()
-        from src.explainability.langchain_explainer import LangChainClinicalExplainer
-        self.langchain_explainer = LangChainClinicalExplainer(config_path=config_path)
+        self.config_path = config_path
+        self.langchain_explainer = None
+        self._langchain_initialized = False
+
+    def _get_langchain_explainer(self):
+        """Load optional retrieval/model dependencies only when this provider is used."""
+        if not self._langchain_initialized:
+            self._langchain_initialized = True
+            try:
+                from src.explainability.langchain_explainer import LangChainClinicalExplainer
+                self.langchain_explainer = LangChainClinicalExplainer(config_path=self.config_path)
+            except Exception as exc:
+                print(f"[LLMExplainer Warning] Optional MedGemma initialization failed: {exc}. Using expert engine.")
+        return self.langchain_explainer
 
     def _load_config(self, path_str: str) -> Dict[str, Any]:
         p = Path(path_str)
+        if not p.is_absolute():
+            p = PROJECT_ROOT / p
         if p.exists():
             try:
                 with open(p, "r", encoding="utf-8") as f:
@@ -44,6 +56,8 @@ class LLMClinicalExplainer:
 
     def _resolve_provider(self) -> str:
         req = str(self.config.get("provider", "medgemma")).lower().strip()
+        if req in ["offline", "expert"]:
+            return "offline"
         if req in ["medgemma", "langchain", "huggingface"]:
             return "medgemma"
         if req == "openai" or (req == "auto" and os.environ.get("OPENAI_API_KEY")):
@@ -77,7 +91,7 @@ class LLMClinicalExplainer:
     ) -> ClinicalRecommendation:
         """Synthesizes neural attributions, GNN edges, and retrieved evidence via LangChain MedGemma or expert generator."""
         # 1. Primary: LangChain MedGemma 1.5-4B Multimodal Framework
-        if self.provider in ["medgemma", "langchain"] and hasattr(self, "langchain_explainer") and self.langchain_explainer:
+        if self.provider in ["medgemma", "langchain"] and self._get_langchain_explainer() is not None:
             try:
                 return self.langchain_explainer.explain_case(
                     hadm_id=hadm_id,
@@ -109,7 +123,7 @@ class LLMClinicalExplainer:
             "patient_age": labs.get("age_at_admission", 78),
             "creatinine_max": labs.get("max_creatinine", 1.2),
             "unique_drug_count": len(active_medications),
-            "active_medications": active_medications[:15],
+            "active_medications": active_medications,
             "primary_risk_drivers": driver_strings,
             "top_gnn_attention_interactions": interaction_pairs,
             "retrieved_clinical_guidelines": guidelines
@@ -176,7 +190,7 @@ class LLMClinicalExplainer:
             if resp.status_code == 200:
                 content = resp.json()["choices"][0]["message"]["content"]
                 parsed = json.loads(content)
-                return ClinicalRecommendation(**parsed)
+                return recommendation_from_response(parsed, payload)
         return None
 
     def _call_gemini(self, payload: Dict[str, Any]) -> Optional[ClinicalRecommendation]:
@@ -198,7 +212,7 @@ class LLMClinicalExplainer:
             if resp.status_code == 200:
                 raw_text = resp.json()["candidates"][0]["content"]["parts"][0]["text"]
                 parsed = json.loads(raw_text)
-                return ClinicalRecommendation(**parsed)
+                return recommendation_from_response(parsed, payload)
         return None
 
     def _call_ollama(self, payload: Dict[str, Any]) -> Optional[ClinicalRecommendation]:
@@ -224,7 +238,7 @@ class LLMClinicalExplainer:
             })
             if resp.status_code == 200:
                 parsed = json.loads(resp.json()["message"]["content"])
-                return ClinicalRecommendation(**parsed)
+                return recommendation_from_response(parsed, payload)
         return None
 
     def _synthesize_offline_expert(self, payload: Dict[str, Any]) -> ClinicalRecommendation:

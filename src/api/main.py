@@ -9,12 +9,26 @@ if str(PROJECT_ROOT) not in sys.path:
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
-from pydantic import BaseModel, Field
 from typing import List, Dict, Any, Optional
+from copy import deepcopy
 import datetime
 import asyncio
 import json
+import logging
+import math
+import uuid
 import torch
+
+from src.api.schemas import (
+    IngestAdmissionRequest,
+    MedGemmaPipelineRequest,
+    PredictGNNRequest,
+    SignCPOEOrderRequest,
+    SimulateDeprescribeRequest,
+)
+from src.api.state import WARD_STATE_LOCK
+
+logger = logging.getLogger(__name__)
 
 from src.api.ward_data import (
     FULL_WARD_CENSUS,
@@ -746,64 +760,105 @@ CLINICAL_RULES_DATABASE: List[Dict[str, Any]] = [
     }
 ]
 
-# ----------------- REQUEST SCHEMAS -----------------
-class PredictGNNRequest(BaseModel):
-    drugs: List[str] = Field(..., example=["lorazepam", "furosemide", "diphenhydramine", "metoprolol"])
-    age: float = Field(default=84.0, example=84.0)
-    creatinine_min: float = Field(default=1.2, example=1.2)
-    creatinine_max: float = Field(default=1.8, example=1.8)
-    creatinine_avg: float = Field(default=1.5, example=1.5)
+def _timestamp() -> str:
+    return datetime.datetime.now(datetime.timezone.utc).isoformat().replace("+00:00", "Z")
 
-class SimulateDeprescribeRequest(BaseModel):
-    drugs: List[str] = Field(..., example=["lorazepam", "furosemide", "diphenhydramine", "metoprolol"])
-    drug_to_remove: str = Field(..., example="lorazepam")
-    age: float = Field(default=84.0, example=84.0)
-    creatinine_min: float = Field(default=1.2, example=1.2)
-    creatinine_max: float = Field(default=1.8, example=1.8)
-    creatinine_avg: float = Field(default=1.5, example=1.5)
 
-class IngestAdmissionRequest(BaseModel):
-    name: str = Field(..., example="Eleanor Vance")
-    age: float = Field(default=78.0)
-    gender: str = Field(default="FEMALE")
-    bed: str = Field(default="Bed 428-A")
-    drugs: List[str] = Field(default_factory=lambda: ["lorazepam", "furosemide"])
-    creatinine: float = Field(default=1.35)
-    mrn: Optional[str] = None
+def _census_patient_detail(patient: Dict[str, Any], drugs=None) -> Dict[str, Any]:
+    """Expose only this patient's available data, without inheriting demo plans."""
+    detail = deepcopy(patient)
+    detail["renal_clearance"] = {
+        "creatinine": patient.get("creatinine"),
+        "creatinine_unit": "mg/dL",
+        "egfr": patient.get("renal_egfr"),
+        "stage": patient.get("renal_stage"),
+    }
+    detail["active_medications"] = [
+        {"id": f"med-{index}", "name": drug, "generic_name": drug, "is_monitored": False}
+        for index, drug in enumerate(drugs if drugs is not None else patient.get("high_risk_meds", []), 1)
+    ]
+    detail["deprescribing_plans"] = []
+    detail["shap_attributions"] = []
+    detail["guidelines"] = []
+    detail["clinical_rationale"] = "\n".join(patient.get("clinical_notes", []))
+    return detail
 
-class SignCPOEOrderRequest(BaseModel):
-    patient_id: str = Field(default="994201")
-    action_ids: List[str] = Field(..., example=["plan_a", "plan_b", "plan_c"])
-    override_reason: Optional[str] = None
-    clinician: str = Field(default="Dr. Sarah Chen, MD")
 
-class MedGemmaPipelineRequest(BaseModel):
-    name: str = Field(default="Robert Miller", example="Robert Miller")
-    mrn: str = Field(default="#884210", example="#884210")
-    age: float = Field(default=84.0, example=84.0)
-    gender: str = Field(default="MALE", example="MALE")
-    bed: str = Field(default="Bed 402-A", example="Bed 402-A")
-    creatinine: float = Field(default=1.80, example=1.80)
-    creatinine_min: Optional[float] = Field(default=1.20, example=1.20)
-    creatinine_max: Optional[float] = Field(default=1.80, example=1.80)
-    creatinine_avg: Optional[float] = Field(default=1.50, example=1.50)
-    drugs_text: Optional[str] = Field(
-        default="Lorazepam 1.0mg QHS, Furosemide 40mg QAM, Diphenhydramine 25mg PRN, Hydralazine 25mg TID, Metoprolol 25mg, Lisinopril 10mg",
-        example="Lorazepam 1.0mg QHS, Furosemide 40mg QAM..."
+def _find_patient(patient_id: str) -> Dict[str, Any]:
+    """Resolve a real patient ID or MRN. Caller holds WARD_STATE_LOCK."""
+    patient = PATIENTS_DATABASE.get(patient_id)
+    if patient is not None:
+        return patient
+    patient = next((p for p in PATIENTS_DATABASE.values() if p.get("mrn") == patient_id), None)
+    if patient is not None:
+        return patient
+    census_patient = next(
+        (p for p in FULL_WARD_CENSUS if str(p["hadm_id"]) == patient_id or p.get("mrn") == patient_id),
+        None,
     )
-    drugs_list: Optional[List[str]] = None
-    save_to_census: bool = Field(default=True)
+    if census_patient is None:
+        raise HTTPException(status_code=404, detail="Patient not found.")
+    return _census_patient_detail(census_patient)
+
+
+def _register_admission(patient: Dict[str, Any], drugs: List[str], audit: Dict[str, Any]):
+    """Publish the admission, detail profile and audit record together."""
+    with WARD_STATE_LOCK:
+        mrn = patient.get("mrn")
+        if mrn and any(p.get("mrn") == mrn for p in [*FULL_WARD_CENSUS, *PATIENTS_DATABASE.values()]):
+            raise HTTPException(status_code=409, detail="An active patient already uses this MRN.")
+        existing_ids = [int(p["hadm_id"]) for p in [*FULL_WARD_CENSUS, *PATIENTS_DATABASE.values()]]
+        hadm_id = max([994299, *existing_ids]) + 1
+        patient["hadm_id"] = hadm_id
+        patient["mrn"] = mrn or f"#MRN-{hadm_id}"
+        detail = _census_patient_detail(patient, drugs)
+        patient["active_medications"] = deepcopy(detail["active_medications"])
+        audit.update({
+            "id": f"AUD-{uuid.uuid4()}",
+            "timestamp": _timestamp(),
+            "patient_id": str(hadm_id),
+            "patient_name": patient["name"],
+        })
+        PATIENTS_DATABASE[str(hadm_id)] = detail
+        FULL_WARD_CENSUS.insert(0, deepcopy(patient))
+        AUDIT_LOG_STORE.insert(0, audit)
+        return deepcopy(patient), audit["id"]
+
+
+def _prediction_summary(prediction: Dict[str, Any]):
+    try:
+        risk = float(prediction["predicted_risk_pct"])
+        tier = prediction["risk_tier"]
+    except (KeyError, TypeError, ValueError) as exc:
+        raise RuntimeError("Invalid inference output.") from exc
+    if not math.isfinite(risk) or not 0 <= risk <= 100 or tier not in {"Critical", "High", "Moderate", "Low"}:
+        raise RuntimeError("Invalid inference output.")
+    return risk, tier
+
+
+def _admission_regimen(prediction: Dict[str, Any], supplied_drugs: List[str]) -> List[str]:
+    medications = prediction.get("active_medications", supplied_drugs)
+    if not isinstance(medications, list) or not medications or any(not isinstance(drug, str) or not drug.strip() for drug in medications):
+        raise RuntimeError("Invalid inference medication output.")
+    return list(dict.fromkeys(drug.strip().lower() for drug in medications))
+
+
+def _high_risk_medications(drugs: List[str], creatinine: float) -> List[str]:
+    return [
+        drug.capitalize() for drug in drugs
+        if audit_patient_medications([drug], creatinine).get("has_pim_alert")
+    ]
 
 # ----------------- API ENDPOINTS -----------------
 @app.get("/api/health")
 def health_check():
     return {
-        "status": "healthy",
+        "status": "healthy" if gnn_engine is not None else "degraded",
         "system": "GeriSafe CDSS API",
         "version": "2.4.0",
         "gnn_model_loaded": gnn_engine is not None,
         "device": str(gnn_engine.device) if gnn_engine else "none",
-        "timestamp": datetime.datetime.utcnow().isoformat() + "Z"
+        "timestamp": _timestamp()
     }
 
 @app.get("/api/ward/kpis")
@@ -818,35 +873,51 @@ def get_ward_distribution():
 
 @app.get("/api/fhir/export")
 def export_fhir_bundle(patient_id: Optional[str] = None):
-    """Generates an HL7 FHIR R4 Bundle for EHR interoperability."""
-    return generate_fhir_r4_bundle(patient_id)
+    """Export the selected patient, or every patient in the ward census."""
+    with WARD_STATE_LOCK:
+        try:
+            if patient_id is not None:
+                return generate_fhir_r4_bundle(patient_id, patient=deepcopy(_find_patient(patient_id)))
+            bundle = {
+                "resourceType": "Bundle",
+                "id": str(uuid.uuid4()),
+                "type": "collection",
+                "timestamp": _timestamp(),
+                "entry": [],
+            }
+            for patient in FULL_WARD_CENSUS:
+                patient_bundle = generate_fhir_r4_bundle(
+                    str(patient["hadm_id"]), patient=deepcopy(_find_patient(str(patient["hadm_id"])))
+                )
+                bundle["entry"].extend(patient_bundle["entry"])
+            return bundle
+        except ValueError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 @app.post("/api/admissions/ingest")
 def ingest_admission(req: IngestAdmissionRequest):
     """Ingests a new inpatient admission, runs live GNN risk inference, and adds to census."""
-    risk_val = 45.0
-    tier = "High"
-    
-    if gnn_engine is not None and req.drugs:
-        try:
-            pred = gnn_engine.predict(
-                drug_list=req.drugs,
-                age=req.age,
-                creatinine_min=req.creatinine - 0.2,
-                creatinine_max=req.creatinine + 0.2,
-                creatinine_avg=req.creatinine
-            )
-            risk_val = pred.get("predicted_risk_pct", pred.get("fall_risk_pct", 45.0))
-            tier = pred.get("risk_tier", "High")
-        except Exception as e:
-            print(f"[Ingest GNN Error] {e}")
-
-    new_hadm = 994300 + len(FULL_WARD_CENSUS)
-    mrn = req.mrn or f"#MRN-{80200 + len(FULL_WARD_CENSUS)}"
+    if gnn_engine is None:
+        raise HTTPException(status_code=503, detail="GNN Engine is currently unavailable.")
+    try:
+        pred = gnn_engine.predict(
+            drug_list=req.drugs,
+            age=req.age,
+            creatinine_min=max(0.01, req.creatinine - 0.2),
+            creatinine_max=req.creatinine + 0.2,
+            creatinine_avg=req.creatinine,
+        )
+        risk_val, tier = _prediction_summary(pred)
+        regimen = _admission_regimen(pred, req.drugs)
+        high_risk_meds = _high_risk_medications(regimen, req.creatinine)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except Exception as exc:
+        logger.error("Admission inference failed (%s).", type(exc).__name__)
+        raise HTTPException(status_code=500, detail="Admission inference failed.") from exc
     
     new_patient = {
-        "hadm_id": new_hadm,
-        "mrn": mrn,
+        "mrn": req.mrn,
         "name": req.name,
         "age": int(req.age),
         "gender": req.gender.upper(),
@@ -857,14 +928,14 @@ def ingest_admission(req: IngestAdmissionRequest):
         "acuity_tier": tier,
         "risk_percentage": round(risk_val, 1),
         "trend": "up" if tier in ["Critical", "High"] else "neutral",
-        "drug_count": len(req.drugs),
+        "drug_count": len(regimen),
         "prn_count": 0,
         "creatinine": req.creatinine,
-        "renal_egfr": max(15, int(140 - req.age - (req.creatinine * 30))),
-        "renal_stage": "CKD 3b" if req.creatinine > 1.4 else "CKD 2",
-        "blood_pressure": "124/76",
-        "bp_drop": -12 if risk_val > 40 else -6,
-        "high_risk_meds": [d.capitalize() for d in req.drugs[:2]],
+        "renal_egfr": pred.get("calculated_egfr"),
+        "renal_stage": None,
+        "blood_pressure": None,
+        "bp_drop": None,
+        "high_risk_meds": high_risk_meds,
         "clinical_notes": [
             f"Admitted to Ward 4B: GNN fall hazard estimated at {round(risk_val, 1)}%",
             "Automated clinical knowledge guardrails scan active"
@@ -872,25 +943,18 @@ def ingest_admission(req: IngestAdmissionRequest):
         "reviewer_info": "New Admission • Ingestion Complete"
     }
     
-    FULL_WARD_CENSUS.insert(0, new_patient)
-    
-    # Log event
     audit_entry = {
-        "id": f"AUD-{datetime.datetime.utcnow().strftime('%Y%m%d-%H%M%S')}",
-        "timestamp": datetime.datetime.utcnow().isoformat() + "Z",
-        "patient_id": str(new_hadm),
-        "patient_name": req.name,
         "action": "New Inpatient Ingested & GNN Evaluated",
         "actor": "System Admission Stream",
-        "details": f"Ingested {req.name} ({req.bed}) with {len(req.drugs)} orders. Calculated acute risk: {round(risk_val, 1)}%.",
+        "details": f"Ingested {req.name} ({req.bed}) with {len(regimen)} medications. Calculated acute risk: {round(risk_val, 1)}%.",
         "status": "Admission Active"
     }
-    AUDIT_LOG_STORE.insert(0, audit_entry)
+    new_patient, audit_id = _register_admission(new_patient, regimen, audit_entry)
     
     return {
         "success": True,
         "patient": new_patient,
-        "audit_id": audit_entry["id"]
+        "audit_id": audit_id
     }
 
 @app.get("/api/telemetry/stream")
@@ -901,13 +965,16 @@ async def telemetry_stream():
         while True:
             await asyncio.sleep(3)
             tick += 1
+            with WARD_STATE_LOCK:
+                active_patients = len(FULL_WARD_CENSUS)
+                high_risk_count = sum(p["acuity_tier"] in {"Critical", "High"} for p in FULL_WARD_CENSUS)
             payload = {
                 "event": "telemetry_pulse",
-                "timestamp": datetime.datetime.utcnow().isoformat() + "Z",
+                "timestamp": _timestamp(),
                 "sync_seconds_ago": 0,
                 "ward_id": "ACUTE CARE UNIT 4B",
-                "active_patients": len(FULL_WARD_CENSUS),
-                "high_risk_count": 11,
+                "active_patients": active_patients,
+                "high_risk_count": high_risk_count,
                 "alert": "Patient #MRN-88421 bed sensor armed" if tick % 6 == 0 else None
             }
             yield f"data: {json.dumps(payload)}\n\n"
@@ -925,11 +992,12 @@ async def telemetry_stream():
 @app.get("/api/patients")
 def get_inpatient_census(
     sort_by: Optional[str] = Query(default="default"),
-    page: Optional[int] = Query(default=1),
-    limit: Optional[int] = Query(default=None)
+    page: int = Query(default=1, ge=1),
+    limit: Optional[int] = Query(default=None, ge=1)
 ):
     """Returns the full 48-patient census for Geriatric Ward 4B."""
-    census = list(FULL_WARD_CENSUS)
+    with WARD_STATE_LOCK:
+        census = deepcopy(FULL_WARD_CENSUS)
     
     # Sorting
     if sort_by == "risk_desc":
@@ -941,7 +1009,7 @@ def get_inpatient_census(
     elif sort_by == "bed":
         census.sort(key=lambda p: p["bed"])
     elif sort_by == "egfr":
-        census.sort(key=lambda p: p.get("renal_egfr", 50))
+        census.sort(key=lambda p: (p.get("renal_egfr") is None, p.get("renal_egfr") or 0))
     elif sort_by == "drugs":
         census.sort(key=lambda p: p.get("drug_count", 0), reverse=True)
         
@@ -955,16 +1023,17 @@ def get_inpatient_census(
 @app.get("/api/patient/{patient_id}")
 def get_patient_detail(patient_id: str):
     """Returns detailed clinical profile, GNN SHAP attributions, circadian profile, and active meds."""
-    patient = PATIENTS_DATABASE.get(patient_id)
-    if not patient:
-        # Fallback to Robert Miller
-        patient = PATIENTS_DATABASE["994201"]
-    return patient
+    with WARD_STATE_LOCK:
+        return deepcopy(_find_patient(patient_id))
 
 @app.get("/api/trajectory/{patient_id}")
 def get_patient_trajectory(patient_id: str):
     """Returns 12-month multi-track longitudinal data, Gantt swimlanes, and prescribing cascade discovery."""
-    return TRAJECTORY_DATA
+    with WARD_STATE_LOCK:
+        patient = _find_patient(patient_id)
+        if str(patient["hadm_id"]) != TRAJECTORY_DATA["patient_id"]:
+            raise HTTPException(status_code=404, detail="Trajectory data is unavailable for this patient.")
+        return deepcopy(TRAJECTORY_DATA)
 
 @app.get("/api/rules")
 def get_clinical_rules():
@@ -978,7 +1047,7 @@ def get_clinical_rules():
     }
 
 @app.get("/api/drugs/search")
-def search_drug_vocabulary(q: str = "", limit: int = 25):
+def search_drug_vocabulary(q: str = "", limit: int = Query(default=25, ge=1, le=100)):
     """Searches the 5,034-drug GNN vocabulary with substring matching."""
     if gnn_engine is None:
         return {"query": q, "count": 0, "results": []}
@@ -1003,10 +1072,11 @@ def search_drug_vocabulary(q: str = "", limit: int = 25):
             if len(results) >= limit:
                 break
                 
+    results = results[:limit]
     return {
         "query": q,
         "count": len(results),
-        "results": results[:limit]
+        "results": results
     }
 
 @app.post("/api/predict-gnn")
@@ -1024,8 +1094,11 @@ def run_gnn_prediction(req: PredictGNNRequest):
             creatinine_avg=req.creatinine_avg
         )
         return result
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Inference error: {str(e)}")
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except Exception as exc:
+        logger.error("Prediction failed (%s).", type(exc).__name__)
+        raise HTTPException(status_code=500, detail="Inference failed.") from exc
 
 @app.post("/api/simulate-deprescribing")
 def run_deprescribing_simulation(req: SimulateDeprescribeRequest):
@@ -1043,18 +1116,19 @@ def run_deprescribing_simulation(req: SimulateDeprescribeRequest):
             creatinine_avg=req.creatinine_avg
         )
         return result
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Simulation error: {str(e)}")
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except Exception as exc:
+        logger.error("Simulation failed (%s).", type(exc).__name__)
+        raise HTTPException(status_code=500, detail="Simulation failed.") from exc
 
 @app.post("/api/medgemma/pipeline")
 def run_medgemma_pipeline(req: MedGemmaPipelineRequest):
-    """
-    Executes the complete two-way clinical AI pipeline:
-    Stage 1: MedGemma 1.5 structures raw admission inputs, maps FRID classes, and computes renal eGFR/CKD stage.
-    Stage 2: GNN Multimodal Inference Engine computes acute fall probability, acuity tier, wDDI graph edges, and SHAP drivers.
-    Stage 3: MedGemma 1.5 verifies GNN predictions against AGS Beers / STOPP v3 guidelines and synthesizes a receptor-level causal mechanism explanation.
-    """
-    # Stage 1: MedGemma 1.5 Structuring
+    """Structure admission inputs, run inference, then request an explanation."""
+    if gnn_engine is None:
+        raise HTTPException(status_code=503, detail="GNN Engine is currently unavailable.")
+
+    cr_min, cr_max, cr_avg = req.creatinine_range()
     stage_1_input = {
         "name": req.name,
         "mrn": req.mrn,
@@ -1062,245 +1136,199 @@ def run_medgemma_pipeline(req: MedGemmaPipelineRequest):
         "gender": req.gender,
         "bed": req.bed,
         "creatinine": req.creatinine,
-        "drugs_text": req.drugs_text or ", ".join(req.drugs_list or []),
+        "creatinine_min": cr_min,
+        "creatinine_max": cr_max,
+        "creatinine_avg": cr_avg,
+        "drugs_text": ", ".join(req.drugs_list) if req.drugs_list is not None else req.drugs_text,
     }
-    structured_admission = medgemma_service.structure_patient_admission(stage_1_input)
+    try:
+        structured_admission = medgemma_service.structure_patient_admission(stage_1_input)
+    except Exception as exc:
+        logger.error("Admission structuring failed (%s).", type(exc).__name__)
+        raise HTTPException(status_code=500, detail="Admission structuring failed.") from exc
 
-    # Extract structured drugs for GNN
-    standardized_drugs = structured_admission.get("standardized_drugs", ["lorazepam", "furosemide"])
-    cr_min = req.creatinine_min if req.creatinine_min is not None else max(0.6, req.creatinine - 0.3)
-    cr_max = req.creatinine_max if req.creatinine_max is not None else req.creatinine
-    cr_avg = req.creatinine_avg if req.creatinine_avg is not None else (cr_min + cr_max) / 2.0
+    standardized_drugs = structured_admission.get("standardized_drugs", [])
+    if not isinstance(standardized_drugs, list) or not standardized_drugs or any(
+        not isinstance(drug, str) or not drug.strip() for drug in standardized_drugs
+    ):
+        raise HTTPException(status_code=422, detail="Admission structuring did not produce a valid medication list.")
 
-    # Stage 2: Multimodal GNN Graph Inference
-    gnn_result: Dict[str, Any] = {}
-    if gnn_engine is not None and standardized_drugs:
-        try:
-            gnn_pred = gnn_engine.predict(
-                drug_list=standardized_drugs,
-                age=float(structured_admission.get("age", req.age)),
-                creatinine_min=cr_min,
-                creatinine_max=cr_max,
-                creatinine_avg=cr_avg
-            )
-            # Extract real GATv2 attended interactions from PyTorch model
-            detected_pairs = []
-            for att in gnn_pred.get("attended_interactions", []):
-                detected_pairs.append({
-                    "pair": [att["drug_a"].capitalize(), att["drug_b"].capitalize()],
-                    "severity": f"Severity {att.get('severity_weight', 0.75)}",
-                    "attention_weight": att.get("attention_weight", 0.5),
-                    "mechanism": att.get("adverse_mechanism", "Pharmacodynamic Interaction")
-                })
-            if not detected_pairs:
-                if len(standardized_drugs) >= 2:
-                    count, w_ddi_val, mechs = medgemma_service.ddi_engine.evaluate_regimen(standardized_drugs)
-                    for m in mechs:
-                        parts = m.split(":")
-                        drug_pair_str = parts[0].split("+")
-                        mechanism_str = parts[1].strip() if len(parts) > 1 else "Additive Pharmacodynamic Interaction"
-                        if len(drug_pair_str) >= 2:
-                            detected_pairs.append({
-                                "pair": [drug_pair_str[0].strip(), drug_pair_str[1].strip()],
-                                "severity": "Major (0.75)",
-                                "attention_weight": 0.60,
-                                "mechanism": mechanism_str
-                            })
-                if not detected_pairs:
-                    if len(standardized_drugs) == 1:
-                        drug_cap = standardized_drugs[0].capitalize()
-                        detected_pairs = [{
-                            "pair": [drug_cap, "Orthostatic / Vasomotor Tone"],
-                            "severity": "Moderate (0.50)",
-                            "attention_weight": 0.55,
-                            "mechanism": f"{drug_cap} Monotherapy Vascular & Postural Tone Impact"
-                        }]
-                    else:
-                        detected_pairs = [
-                            {"pair": ["Lorazepam", "Diphenhydramine"], "severity": "Major (0.85)", "attention_weight": 0.65, "mechanism": "Synergistic CNS Depression"},
-                            {"pair": ["Furosemide", "Hydralazine"], "severity": "Major (0.75)", "attention_weight": 0.60, "mechanism": "Profound Orthostatic Hypotension"}
-                        ]
-
-            patient_age_val = float(structured_admission.get("age", req.age))
-            age_feature_label = "Age > 80 Polypharmacy" if patient_age_val >= 80 else f"Age {int(patient_age_val)} Fragility Profile"
-
-            gnn_result = {
-                "risk_percentage": gnn_pred.get("predicted_risk_pct", 68.4),
-                "acuity_tier": gnn_pred.get("risk_tier", "Critical"),
-                "relative_risk": gnn_pred.get("relative_risk_multiplier", "3.77x"),
-                "raw_gnn_prob": gnn_pred.get("raw_gnn_pct", 8.47),
-                "w_ddi_burden_score": round(sum(att.get("severity_weight", 0.5) for att in gnn_pred.get("attended_interactions", [])) / max(1, len(standardized_drugs)), 2) or 0.92,
-                "synergistic_pairs_count": len(detected_pairs),
-                "detected_interactions": detected_pairs,
-                "top_features": [
-                    {"feature": "wDDI Interacting Pairs Burden", "importance": 0.38},
-                    {"feature": f"eGFR Decline ({structured_admission.get('ckd_stage', 'CKD 3b')})", "importance": 0.29},
-                    {"feature": "Cumulative Anticholinergic ACB +3" if structured_admission.get("cns_polypharmacy_flag") else "Prescribing Cascade Risk", "importance": 0.19},
-                    {"feature": age_feature_label, "importance": 0.14}
-                ],
-                "model_confidence": "95.2%",
-                "inference_engine": "Multimodal GATv2 Graph Neural Network"
+    try:
+        prediction = gnn_engine.predict(
+            drug_list=standardized_drugs,
+            age=req.age,
+            creatinine_min=cr_min,
+            creatinine_max=cr_max,
+            creatinine_avg=cr_avg,
+        )
+        risk, tier = _prediction_summary(prediction)
+        regimen = _admission_regimen(prediction, standardized_drugs)
+        high_risk_meds = _high_risk_medications(regimen, req.creatinine)
+        interactions = [
+            {
+                "pair": [interaction["drug_a"].capitalize(), interaction["drug_b"].capitalize()],
+                "severity": f"Severity {interaction['severity_weight']}",
+                "attention_weight": interaction["attention_weight"],
+                "mechanism": interaction["adverse_mechanism"],
             }
-        except Exception as e:
-            print(f"[MedGemma Pipeline GNN Error] {e}")
-            gnn_result = {
-                "risk_percentage": 68.4,
-                "acuity_tier": "Critical",
-                "w_ddi_burden_score": 0.92,
-                "synergistic_pairs_count": 3,
-                "detected_interactions": [
-                    {"pair": ["Lorazepam", "Diphenhydramine"], "severity": "Major", "mechanism": "Synergistic CNS Depression"},
-                    {"pair": ["Furosemide", "Hydralazine"], "severity": "Major", "mechanism": "Profound Orthostatic Hypotension"}
-                ],
-                "top_features": [
-                    {"feature": "wDDI Interacting Pairs Burden", "importance": 0.38},
-                    {"feature": "eGFR Decline (CKD 3b)", "importance": 0.29}
-                ],
-                "model_confidence": "94.8%",
-                "inference_engine": "Multimodal GATv2 Graph Neural Network (Calibrated Fallback)"
-            }
-    else:
+            for interaction in prediction.get("attended_interactions", [])
+        ]
         gnn_result = {
-            "risk_percentage": 68.4,
-            "acuity_tier": "Critical",
-            "w_ddi_burden_score": 0.92,
-            "synergistic_pairs_count": 3,
-            "detected_interactions": [
-                {"pair": ["Lorazepam", "Diphenhydramine"], "severity": "Major", "mechanism": "Synergistic CNS Depression"},
-                {"pair": ["Furosemide", "Hydralazine"], "severity": "Major", "mechanism": "Profound Orthostatic Hypotension"}
-            ],
-            "top_features": [
-                {"feature": "wDDI Interacting Pairs Burden", "importance": 0.38},
-                {"feature": "eGFR Decline (CKD 3b)", "importance": 0.29}
-            ],
-            "model_confidence": "94.8%",
-            "inference_engine": "Multimodal GATv2 Graph Neural Network"
+            "risk_percentage": risk,
+            "acuity_tier": tier,
+            "relative_risk": prediction.get("relative_risk_multiplier"),
+            "raw_gnn_prob": prediction.get("raw_gnn_pct"),
+            "w_ddi_burden_score": round(
+                sum(item["severity_weight"] for item in prediction.get("attended_interactions", []))
+                / max(1, len(regimen)), 2
+            ),
+            "synergistic_pairs_count": len(interactions),
+            "detected_interactions": interactions,
+            "top_features": prediction.get("feature_attributions", []),
+            "model_confidence": "Unavailable",
+            "inference_engine": "Multimodal GATv2 Graph Neural Network",
         }
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except Exception as exc:
+        logger.error("Pipeline inference failed (%s).", type(exc).__name__)
+        raise HTTPException(status_code=500, detail="Pipeline inference failed.") from exc
 
-    # Stage 3: MedGemma 1.5 Verification & Causal Explanation
-    verification_result = medgemma_service.verify_and_explain(
-        structured_data=structured_admission,
-        gnn_result=gnn_result
-    )
+    try:
+        verification_result = medgemma_service.verify_and_explain(
+            structured_data=structured_admission, gnn_result=gnn_result
+        )
+    except Exception as exc:
+        logger.error("Pipeline explanation failed (%s).", type(exc).__name__)
+        raise HTTPException(status_code=500, detail="Pipeline explanation failed.") from exc
 
-    # Optional Census registration
+    patient = None
+    audit_id = None
     if req.save_to_census:
-        new_hadm = 994400 + len(FULL_WARD_CENSUS)
         census_entry = {
-            "hadm_id": new_hadm,
-            "mrn": structured_admission.get("mrn", req.mrn),
-            "name": structured_admission.get("name", req.name),
-            "age": int(structured_admission.get("age", req.age)),
-            "gender": structured_admission.get("gender", req.gender).upper(),
-            "bed": structured_admission.get("bed", req.bed),
+            "mrn": req.mrn,
+            "name": req.name,
+            "age": int(req.age),
+            "gender": req.gender.upper(),
+            "bed": req.bed,
             "ward": "Geriatric Ward 4B",
             "los_days": 1,
             "code_status": "Full Code",
-            "acuity_tier": gnn_result.get("acuity_tier", "Critical"),
-            "risk_percentage": round(float(gnn_result.get("risk_percentage", 68.4)), 1),
-            "trend": "up",
-            "drug_count": len(structured_admission.get("parsed_orders", [])),
-            "prn_count": sum(1 for o in structured_admission.get("parsed_orders", []) if o.get("is_prn")),
-            "creatinine": structured_admission.get("serum_creatinine", req.creatinine),
-            "renal_egfr": structured_admission.get("calculated_egfr", 31),
-            "renal_stage": structured_admission.get("ckd_stage", "CKD Stage 3b"),
-            "blood_pressure": "118/74",
-            "bp_drop": -18,
-            "high_risk_meds": [d.capitalize() for d in standardized_drugs[:3]],
+            "acuity_tier": tier,
+            "risk_percentage": round(risk, 1),
+            "trend": "up" if tier in {"Critical", "High"} else "neutral",
+            "drug_count": len(regimen),
+            "prn_count": sum(1 for order in structured_admission.get("parsed_orders", []) if order.get("is_prn")),
+            "creatinine": req.creatinine,
+            "renal_egfr": structured_admission.get("calculated_egfr"),
+            "renal_stage": structured_admission.get("ckd_stage"),
+            "blood_pressure": None,
+            "bp_drop": None,
+            "high_risk_meds": high_risk_meds,
             "clinical_notes": [
-                f"MedGemma 1.5 + GNN Ingestion Pipeline Executed: {gnn_result.get('risk_percentage')}% fall probability",
-                f"Verification: {verification_result.get('verification_status', 'VERIFIED')} ({verification_result.get('confidence', '96.4%')})"
+                f"Admission inference completed: {risk}% fall risk.",
+                f"Explanation status: {verification_result.get('verification_status', 'Unavailable')}",
             ],
-            "reviewer_info": "MedGemma 1.5 Verified • Admission Active"
+            "reviewer_info": "Admission Active",
         }
-        FULL_WARD_CENSUS.insert(0, census_entry)
-
         audit_entry = {
-            "id": f"AUD-{datetime.datetime.utcnow().strftime('%Y%m%d-%H%M%S')}",
-            "timestamp": datetime.datetime.utcnow().isoformat() + "Z",
-            "patient_id": str(new_hadm),
-            "patient_name": structured_admission.get("name", req.name),
-            "action": "MedGemma 1.5 <-> GNN Ingestion Complete",
-            "actor": "MedGemma 1.5 CDSS Agent",
-            "details": f"Ingested {len(standardized_drugs)} meds. GNN computed {gnn_result.get('risk_percentage')}%. MedGemma verified against AGS Beers 2023.",
-            "status": "Verified & Active"
+            "action": "Admission Inference & Explanation Complete",
+            "actor": "Admission Pipeline",
+            "details": f"Ingested {len(regimen)} meds. Calculated risk: {risk}%.",
+            "status": "Admission Active",
         }
-        AUDIT_LOG_STORE.insert(0, audit_entry)
+        patient, audit_id = _register_admission(census_entry, regimen, audit_entry)
 
     return {
         "success": True,
+        "patient_id": str(patient["hadm_id"]) if patient else None,
+        "patient": patient,
+        "audit_id": audit_id,
         "patient_summary": {
-            "name": structured_admission.get("name", req.name),
-            "mrn": structured_admission.get("mrn", req.mrn),
-            "bed": structured_admission.get("bed", req.bed),
-            "age": structured_admission.get("age", req.age),
-            "gender": structured_admission.get("gender", req.gender),
-            "egfr": structured_admission.get("calculated_egfr", 31),
-            "ckd_stage": structured_admission.get("ckd_stage", "CKD Stage 3b"),
-            "risk_percentage": gnn_result.get("risk_percentage", 68.4),
-            "acuity_tier": gnn_result.get("acuity_tier", "Critical"),
+            "name": req.name,
+            "mrn": req.mrn,
+            "bed": req.bed,
+            "age": req.age,
+            "gender": req.gender,
+            "egfr": structured_admission.get("calculated_egfr"),
+            "ckd_stage": structured_admission.get("ckd_stage"),
+            "risk_percentage": risk,
+            "acuity_tier": tier,
         },
         "pipeline_stages": {
             "stage_1_medgemma_structuring": structured_admission,
             "stage_2_gnn_inference": gnn_result,
             "stage_3_medgemma_verification": verification_result,
-        }
+        },
     }
+
 
 @app.post("/api/cpoe/sign")
 def sign_cpoe_adjustments(req: SignCPOEOrderRequest):
-    """Authorizes and signs CPOE deprescribing actions, updating patient risk in real-time."""
-    patient = PATIENTS_DATABASE.get(req.patient_id, PATIENTS_DATABASE["994201"])
-    
-    signed_plans = []
-    for plan in patient["deprescribing_plans"]:
-        if plan["id"] in req.action_ids or "all" in req.action_ids:
-            plan["is_queued"] = True
-            signed_plans.append(plan["title"])
-            
-    # Calculate new risk after signing adjustments (e.g. falls from 68.4% down to 26.8%)
-    original_risk = patient["risk_percentage"]
-    if len(req.action_ids) >= 3 or "all" in req.action_ids:
-        new_risk = 26.8
-        tier = "Moderate"
-    elif "plan_a" in req.action_ids:
-        new_risk = 46.0
-        tier = "High"
-    else:
-        new_risk = 52.4
-        tier = "High"
+    """Record plan authorization; risk stays unchanged until treatment is executed."""
+    with WARD_STATE_LOCK:
+        patient = _find_patient(req.patient_id)
+        plans = patient.get("deprescribing_plans", [])
+        if not plans:
+            raise HTTPException(status_code=409, detail="No deprescribing plans are available for this patient.")
+        available_ids = {plan["id"] for plan in plans}
+        requested_ids = set(req.action_ids)
+        unknown_ids = requested_ids - available_ids - {"all"}
+        if unknown_ids:
+            raise HTTPException(status_code=400, detail="Unknown deprescribing action IDs.")
+        selected = [plan for plan in plans if "all" in requested_ids or plan["id"] in requested_ids]
+        unsigned = [plan for plan in selected if not plan.get("is_signed", False)]
+        risk = patient["risk_percentage"]
+        tier = patient["acuity_tier"]
+        signed_plans = [plan["title"] for plan in unsigned]
 
-    patient["risk_percentage"] = new_risk
-    patient["acuity_tier"] = tier
-    
-    # Create audit record
-    audit_entry = {
-        "id": f"AUD-{datetime.datetime.utcnow().strftime('%Y%m%d-%H%M%S')}",
-        "timestamp": datetime.datetime.utcnow().isoformat() + "Z",
-        "patient_id": req.patient_id,
-        "patient_name": patient["name"],
-        "action": "CPOE Deprescribing Orders Signed",
-        "actor": req.clinician,
-        "details": f"Signed adjustments: {', '.join(signed_plans)}. Fall risk mitigated from {original_risk}% to {new_risk}%.",
-        "status": "Signed & Transmitted to Pharmacy EHR"
-    }
-    AUDIT_LOG_STORE.insert(0, audit_entry)
+        if unsigned:
+            timestamp = _timestamp()
+            audit_id = f"AUD-{uuid.uuid4()}"
+            audit_entry = {
+                "id": audit_id,
+                "timestamp": timestamp,
+                "patient_id": str(patient["hadm_id"]),
+                "patient_name": patient["name"],
+                "action": "CPOE Deprescribing Orders Signed",
+                "actor": req.clinician,
+                "details": f"Signed adjustments: {', '.join(signed_plans)}. Risk remains {risk}% pending execution and recomputation.",
+                "override_reason": req.override_reason,
+                "status": "Signed; Pending Execution",
+            }
+            for plan in unsigned:
+                plan.update({
+                    "is_queued": True,
+                    "is_signed": True,
+                    "signed_by": req.clinician,
+                    "signed_at": timestamp,
+                    "signed_audit_id": audit_id,
+                })
+            AUDIT_LOG_STORE.insert(0, audit_entry)
+        else:
+            audit_id = selected[-1].get("signed_audit_id")
 
-    return {
-        "success": True,
-        "patient_id": req.patient_id,
-        "original_risk": original_risk,
-        "new_risk": new_risk,
-        "acuity_tier": tier,
-        "signed_actions": signed_plans,
-        "audit_id": audit_entry["id"],
-        "message": f"Successfully signed {len(signed_plans)} adjustments. Patient risk re-stratified to {new_risk}% ({tier})."
-    }
+        return {
+            "success": True,
+            "patient_id": str(patient["hadm_id"]),
+            "original_risk": risk,
+            "new_risk": risk,
+            "acuity_tier": tier,
+            "signed_actions": signed_plans,
+            "audit_id": audit_id,
+            "already_signed": not bool(unsigned),
+            "message": (
+                f"Successfully signed {len(signed_plans)} adjustments. Risk remains unchanged pending execution and recomputation."
+                if unsigned else "The selected adjustments have already been signed."
+            ),
+        }
+
 
 @app.get("/api/audit-log")
 def get_audit_log():
-    """Returns the immutable clinical governance audit trail."""
-    return AUDIT_LOG_STORE
+    """Returns a snapshot of the process-local clinical governance audit trail."""
+    with WARD_STATE_LOCK:
+        return deepcopy(AUDIT_LOG_STORE)
 
 
 if __name__ == "__main__":

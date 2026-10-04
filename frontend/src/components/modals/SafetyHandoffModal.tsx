@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { X, ShieldCheck, AlertOctagon, BedDouble, CheckCircle } from "lucide-react";
+import { X, ShieldCheck, AlertOctagon, BedDouble } from "lucide-react";
 import { Patient } from "@/types/patient";
 
 interface SafetyHandoffModalProps {

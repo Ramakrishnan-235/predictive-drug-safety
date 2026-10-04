@@ -1,6 +1,7 @@
 import os
 import sys
 import logging
+import json
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 from io import BytesIO
@@ -61,12 +62,24 @@ class MedGemmaChatModel(BaseChatModel):
         return "medgemma-1.5-4b-multimodal"
 
     def is_weights_cached(self) -> bool:
-        """Checks if the heavy model weights are cached locally to prevent blocking synchronous requests."""
+        """Require actual weight files, including every shard referenced by an index."""
         try:
             from huggingface_hub import try_to_load_from_cache
-            for filename in ["model.safetensors.index.json", "model.safetensors", "pytorch_model.bin.index.json"]:
+            for filename in ["model.safetensors", "pytorch_model.bin"]:
                 cached = try_to_load_from_cache(self.model_id, filename)
-                if cached is not None:
+                if isinstance(cached, str) and Path(cached).is_file():
+                    return True
+            for filename in ["model.safetensors.index.json", "pytorch_model.bin.index.json"]:
+                cached = try_to_load_from_cache(self.model_id, filename)
+                if not isinstance(cached, str) or not Path(cached).is_file():
+                    continue
+                with open(cached, "r", encoding="utf-8") as index_file:
+                    index = json.load(index_file)
+                shards = set(index.get("weight_map", {}).values())
+                if not shards:
+                    continue
+                shard_paths = [try_to_load_from_cache(self.model_id, shard) for shard in shards]
+                if all(isinstance(path, str) and Path(path).is_file() for path in shard_paths):
                     return True
             return False
         except Exception:
@@ -122,6 +135,7 @@ class MedGemmaChatModel(BaseChatModel):
             self._processor = AutoProcessor.from_pretrained(
                 self.model_id,
                 token=token,
+                local_files_only=True,
             )
         except Exception as e:
             msg = str(e)
@@ -141,6 +155,7 @@ class MedGemmaChatModel(BaseChatModel):
                 device_map=self.device_map,
                 torch_dtype=resolved_dtype,
                 token=token,
+                local_files_only=True,
                 **quant_kwargs,
             )
             self._is_loaded = True

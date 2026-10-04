@@ -3,9 +3,7 @@
 import React, { useState } from "react";
 import {
   ArrowLeft,
-  Calendar,
   CheckSquare,
-  Square,
   Download,
   AlertTriangle,
   Flame,
@@ -14,12 +12,9 @@ import {
   CheckCircle2,
   XCircle,
   Printer,
-  ChevronDown,
   Droplets,
-  Activity,
   TrendingDown,
   Sparkles,
-  Layers,
 } from "lucide-react";
 
 interface PatientTrajectoryProps {
@@ -58,19 +53,21 @@ export function PatientTrajectory({
   const handleApplyToSMR = () => {
     setAppliedNotification(true);
     setTimeout(() => {
-      onApplyToSMR?.() || onBackToSMR();
+      if (onApplyToSMR) onApplyToSMR();
+      else onBackToSMR();
     }, 900);
   };
 
   return (
     <div className="space-y-4 font-sans text-slate-800 pb-12 animate-in fade-in duration-300">
+      <div role="status" className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">Demonstration trajectory for Robert Miller. Timeline, laboratory values and recommendations are sample data.</div>
       {/* Toast alert when deprescribing plan is applied */}
       {appliedNotification && (
         <div className="fixed top-16 right-8 z-50 rounded-xl border border-emerald-300 bg-emerald-50 px-4 py-3 text-sm text-emerald-900 shadow-lg flex items-center gap-3 animate-in slide-in-from-top-2">
           <CheckCircle2 className="w-5 h-5 text-emerald-600" />
           <div>
-            <div className="font-bold">Deprescribing Plan Synced</div>
-            <div className="text-xs text-emerald-700">3 cascade de-escalations applied to active SMR regimen.</div>
+            <div className="font-bold">Opening Demonstration Preview</div>
+            <div className="text-xs text-emerald-700">Sample recommendations are available in the SMR screen.</div>
           </div>
         </div>
       )}

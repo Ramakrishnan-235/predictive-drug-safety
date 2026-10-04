@@ -3,16 +3,14 @@ import sys
 from pathlib import Path
 import pandas as pd
 
-# Support standard configured paths and local workspace directories
-CANDIDATE_PATHS = [
-    Path("data/raw/mimic4/hosp"),
-    Path("data/raw/MIMIC-iv v.2.1/hos"),
-    Path("data/raw/MIMIC-iv v.2.1/hosp"),
-    Path("data/raw/mimic-iv/hosp"),
-    Path("data/raw/mimic-iv-2.1/hos"),
-]
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
 
-HOSP = next((p for p in CANDIDATE_PATHS if p.exists()), Path("data/raw/mimic4/hosp"))
+from src.data_prep.paths import resolve_hospital_directory, resolve_table_path
+
+# Support standard configured paths and local workspace directories
+HOSP = resolve_hospital_directory()
 
 
 def main():
@@ -25,8 +23,8 @@ def main():
         print(f"Error: Hospital directory not found at {HOSP}")
         sys.exit(1)
 
-    patients = pd.read_csv(HOSP / "patients.csv")
-    admissions = pd.read_csv(HOSP / "admissions.csv")
+    patients = pd.read_csv(resolve_table_path(HOSP, "patients"))
+    admissions = pd.read_csv(resolve_table_path(HOSP, "admissions"))
     print(f"Patients:            {len(patients):>12,}")
     print(f"Admissions:          {len(admissions):>12,}")
 
@@ -34,15 +32,15 @@ def main():
     print(f"Avg admissions/pt:   {vpp.mean():>12.2f}")
     print(f"Multi-visit patients:{(vpp > 1).sum():>12,}  ← critical for our task")
 
-    dx = pd.read_csv(HOSP / "diagnoses_icd.csv", dtype=str)
+    dx = pd.read_csv(resolve_table_path(HOSP, "diagnoses_icd"), dtype=str)
     print(f"\nDiagnoses rows:      {len(dx):>12,}")
     print(f"Unique ICD codes:    {dx.icd_code.nunique():>12,}")
 
-    proc = pd.read_csv(HOSP / "procedures_icd.csv", dtype=str)
+    proc = pd.read_csv(resolve_table_path(HOSP, "procedures_icd"), dtype=str)
     print(f"Procedures rows:     {len(proc):>12,}")
 
     print("\nLoading prescriptions (biggest table, ~1 min)...")
-    rx = pd.read_csv(HOSP / "prescriptions.csv", low_memory=False)
+    rx = pd.read_csv(resolve_table_path(HOSP, "prescriptions"), low_memory=False)
     print(f"Prescription rows:   {len(rx):>12,}")
     print(f"Unique NDC codes:    {rx.ndc.nunique():>12,}")
     print(f"Null NDC rows:       {rx.ndc.isna().sum():>12,}")
